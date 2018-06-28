@@ -8,7 +8,7 @@ from openpyxl import load_workbook
 from openpyxl import Workbook
 from threading import Thread
 from passlib.hash import bcrypt
-debugging = True
+debugging = False
 
 class OrientModel():
     
@@ -17,7 +17,7 @@ class OrientModel():
         self.user = "root"
         self.pswd = "admin"
         self.client = pyorient.OrientDB("localhost", 2424)
-        self.session_id = self.client.connect(self.user, self.pswd)  
+        self.session_id = self.client.connect(self.user, self.pswd) 
         self.Verbose = True
         self.entities = ['Person', 'Object', 'Location', 'Event']
         self.reltypes = ['AccountCreated', 'AnalysisToSupport', 'BornOn', 'BornIn', 'ChargedWith', 'CollectionToSupport', 
@@ -27,21 +27,31 @@ class OrientModel():
                          'ProcessedIntel', 'Published', 'PublishedIntel', 'PublishedTask', 'ReportedAt', 'RegisteredOn', 'ReferenceLink',
                          'RecordedBy', 'Searched', 'SubjectofContact', 'Supporting', 'Tagged', 'TaskedTo', 'TA_Reference', 'TextAnalytics',
                          'TweetLocation', 'Tweeted']
-        
-        if debugging == False:
-            try:
-                self.BaseBook = '%s/application/osint/data/BaseBook.xlsx' % (os.getcwd())
-                self.SocialPath = '%s/application/osint/data/Social.csv' % (os.getcwd())
-            except:
-                self.BaseBook = '%s\\data\\BaseBook.xlsx' % (os.getcwd())
-                self.SocialPath = '%s\\data\\Social.csv' % (os.getcwd())  
+        self.setDemoDataPath()
+        # If the POLER schema doesn't exist create it
+        try:
+            self.openDB('POLER')
+        except:
+            if debugging == False:
+                self.Locations  = pd.read_excel(self.BaseBook, sheetname= "Locations")
+                self.People     = pd.read_excel(self.BaseBook, sheetname= "People")                 
+            self.initialize_reset()  
+
+    def setDemoDataPath(self):
+        if '\\' in os.getcwd():
+            if debugging == False:
+                self.BaseBook   = '%s\\application\\services\\data\\BaseBook.xlsx' % (os.getcwd())
+                self.SocialPath = '%s\\application\\services\\data\\Social.csv' % (os.getcwd()) 
+            else:
+                self.BaseBook   = '%s\\data\\BaseBook.xlsx' % (os.getcwd()) # debugging line 
+                self.SocialPath = '%s\\data\\Social.csv' % (os.getcwd()) # debugging line    
         else:
-            try:
-                self.BaseBook   = '%s\\data/BaseBook.xlsx' % (os.getcwd()) # debugging line 
-                self.SocialPath   = '%s\\data\\Social.csv' % (os.getcwd()) # debugging line                   
-            except:
-                self.BaseBook   = '%s/osint/data/BaseBook.xlsx' % (os.getcwd()) # debugging line
-                self.SocialPath = '%s/osint/data/Social.csv' % (os.getcwd())         
+            if debugging == False:
+                self.BaseBook   = '%s/application/services/data/BaseBook.xlsx' % (os.getcwd())
+                self.SocialPath = '%s/application/services/data/Social.csv' % (os.getcwd())   
+            else:
+                self.BaseBook   = '%s/data/BaseBook.xlsx' % (os.getcwd()) # debugging line
+                self.SocialPath = '%s/data/Social.csv' % (os.getcwd())                   
 
     def shutdown(self):
         self.client.shutdown(self.user, self.pswd)
@@ -52,6 +62,7 @@ class OrientModel():
     def setToken(self):
         self.sessionToken = self.client.get_session_token()
         self.client.set_session_token(self.sessionToken)
+        
     
     def createPOLER(self):
         
@@ -564,7 +575,7 @@ class OrientModel():
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         print("[%s_ODB-preLoadLocationsThread]: process started." % (TS))    
         
-        Locations = pd.read_excel(self.BaseBook, sheetname= "Locations")
+        Locations = self.Locations
         entity = {'TYPE' : 'Location'}
         L_TYPE = 'City'
         for index, row in Locations.iterrows():
@@ -589,7 +600,7 @@ class OrientModel():
         B1 = 'B1'
         C1 = 'C1'        
         AUTHS = [A1, B1, C1]
-        People = pd.read_excel(self.BaseBook, sheetname= "People")
+        People = self.People
         entity = {'TYPE' : 'Person'}
         L_TYPE = 'Person'
         for index, row in People.iterrows():
@@ -931,6 +942,119 @@ class OrientModel():
         self.openDB('POLER')
         self.client.tx_commit()
         
+    def tileStats(self):
+        
+        if self.Verbose == True:
+            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            print("[%s_ODB-tileStats]: process started." % (TS))          
+        
+        tile_stats = {}
+        DIR = {}
+        CATEGORY = 'PIR'
+        sql = '''select count(*) from Object where TYPE = '%s' ''' % CATEGORY
+        DIR['PIRcount'] = int(self.client.command(sql)[0].oRecordData['count'])
+        sql = '''select count(*) from Object where TYPE = '%s' and "O_CLASS2" = 'Imminent' ''' % CATEGORY
+        DIR['Critical'] = int(self.client.command(sql)[0].oRecordData['count'])     
+        sql = '''select count(*) from Object where TYPE = '%s' and "O_CLASS2" = 'High' ''' % CATEGORY
+        DIR['High'] = int(self.client.command(sql)[0].oRecordData['count']) 
+        sql = '''select count(*) from Object where TYPE = '%s' and "O_CLASS2" = 'Medium' ''' % CATEGORY
+        DIR['Medium'] = int(self.client.command(sql)[0].oRecordData['count']) 
+        DIR['Low'] = DIR['PIRcount'] - DIR['Critical'] - DIR['High'] - DIR['Medium'] 
+        tile_stats['DIR'] = DIR
+        
+        DIT = {}
+        CATEGORY = 'Task'
+        sql = '''select count(*) from Event where CATEGORY = '%s' ''' % CATEGORY
+        try:
+            DIT['Taskcount'] = int(self.client.command(sql)[0].oRecordData['count']) 
+        except:
+            DIT['Taskcount'] = 0
+        DIT['Outstanding'] = DIT['Taskcount'] / 3
+        sql = '''select count(*) from Event where CATEGORY = '%s' ''' % CATEGORY
+        try:
+            DIT['Last'] = int(self.client.command(sql)[0].oRecordData['count']) 
+        except:
+            DIT['Taskcount'] = 0        
+        tile_stats['DIT'] = DIT
+        
+        CO = {}
+        CATEGORY = 'OSINTSearch'
+        
+        sql = '''select count(*) from Event where CATEGORY = '%s' ''' % CATEGORY
+        try:
+            CO['Searches'] = int(self.client.command(sql)[0].oRecordData['count'])   
+        except:
+            CO['Searches'] = 0
+        CO['Channels'] = 3
+        sql = '''select count(*) from Event where CATEGORY = '%s' ''' % CATEGORY
+        try:
+            CO['Lastsearch'] = int(self.client.command(sql)[0].oRecordData['count'])
+        except:
+            CO['Lastsearch'] = 0
+        tile_stats['CO'] = CO
+        
+        CF = {}
+        CATEGORY = 'PROCESSED_INTEL'
+        sql = '''select count(*) from Event where CATEGORY  = '%s' ''' % CATEGORY
+        try:
+            CF['Files'] = int(self.client.command(sql)[0].oRecordData['count']) 
+        except:
+            CF['Files'] = 0
+        CF['Templates'] = 7
+        sql = '''select count(*) from Event where CATEGORY  = '%s' ''' % CATEGORY
+        try:
+            CF['Lastupload'] = int(self.client.command(sql)[0].oRecordData['count'])  
+        except:
+            CF['Lastupload'] = 0
+        tile_stats['CF'] = CF
+        
+        DET = {}
+        sql = ''' select count(*) from Event where E_DESC like '%EXTRACTION_CORE_VOICEOFCUSTOMER%', 'EXTRACTION_CORE_VOICEOFCUSTOMER') '''
+        try:
+            DET['Sentiment'] = int(self.client.command(sql)[0].oRecordData['count']) 
+        except:
+            DET['Sentiment'] = 0
+        sql = ''' select count(*) from Event where E_DESC like '%EXTRACTION_CORE_VOICEOFCUSTOMER%', 'EXTRACTION_CORE_PUBLIC_SECTOR') '''
+        try:
+            DET['POLE'] = int(self.client.command(sql)[0].oRecordData['count'])  
+        except:
+            DET['POLE'] = 0
+        sql = ''' select count(*) from Event where E_DESC like '%EXTRACTION_CORE_VOICEOFCUSTOMER%', 'LINGANALYSIS_FULL') '''
+        try:
+            DET['Linguistic'] = int(self.client.command(sql)[0].oRecordData['count']) 
+        except:
+            DET['Linguistic'] = 0
+        tile_stats['DET'] = DET
+        
+        AE = {}
+        CATEGORY = 'PUBLISHED_INTEL'
+        sql = '''select count(*) from Event where CATEGORY  = '%s' ''' % CATEGORY
+        try:
+            AE['New'] = int(self.client.command(sql)[0].oRecordData['count']) 
+        except:
+            AE['New'] = 0
+        sql = '''select count(*) from Event where CATEGORY  = '%s' ''' % CATEGORY
+        try:
+            AE['Merged'] = int(self.client.command(sql)[0].oRecordData['count'])
+        except:
+            sql = '''select count(*) from Event where CATEGORY  = '%s' ''' % CATEGORY
+        try:
+            AE['Relations'] = int(self.client.command(sql)[0].oRecordData['count'])         
+        except:
+            AE['Relations'] = 0
+        tile_stats['AE'] = AE
+        VP = {}
+        VP['Children'] = 0
+        VP['Adults']   = 5
+        VP['Total']    = VP['Children'] + VP['Adults'] 
+        tile_stats['VP'] = VP
+        
+        if self.Verbose == True:
+            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            print("[%s_ODB-tileStats]: %s." % (TS, tile_stats))           
+        
+        return tile_stats      
+        
     def menuFill(self, uaa):
         
         menu = {'LOCATIONS' : [],
@@ -1189,8 +1313,9 @@ class OrientModel():
 
 
 OM = OrientModel()
-OM.initialize_reset()
+#OM.initialize_reset()
 OM.openDB('POLER')
+OM.tileStats()
 #OM.initialize_reset()
 #GUID = 21529578459757368
 #TYPE = 'Person'
