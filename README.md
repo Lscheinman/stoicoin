@@ -9,7 +9,7 @@
 
 ## Set up Python
 - sudo apt-get update
-- sudo apt-get install build-essential libssl-dev libffi-dev python3-dev python3-pip nginx
+- sudo apt-get install build-essential libssl-dev libffi-dev python3-dev python3-pip nginx python-setuptools
 - sudo pip3 install --upgrade pip
 - sudo apt-get update
 - sudo pip3 install virtualenv
