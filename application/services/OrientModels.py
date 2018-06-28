@@ -1200,9 +1200,9 @@ class OrientModel():
             e = e.oRecordData
             d['GUID']   = e['GUID']
             d['NAME']   = e['CATEGORY'] 
-            d['DESC']   = str(e['E_DESC']),
-            d['CLASS1'] = e['CLASS1'],
-            d['DATE']   = e['DATE'].strftime('%d %b %Y')
+            d['DESC']   = str(e['E_DESC'])
+            d['CLASS1'] = e['CLASS1']
+            d['DATE']   = datetime.strptime(e['DATE'], '%Y-%m-%d').strftime('%d %b %Y')
             d['DTG']    = int(e['DTG'])
             d['STATUS'] = e['ORIGIN']
             d['FROM']   = e['XCOORD']
@@ -1312,10 +1312,10 @@ class OrientModel():
         return results    
 
 
-OM = OrientModel()
+#OM = OrientModel()
 #OM.initialize_reset()
-OM.openDB('POLER')
-OM.tileStats()
+#OM.openDB('POLER')
+#OM.tileStats()
 #OM.initialize_reset()
 #GUID = 21529578459757368
 #TYPE = 'Person'
