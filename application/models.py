@@ -47,8 +47,8 @@ class User:
         self.datapath = '%s/application/services/data/' % (os.getcwd())
         self.ODB = om.OrientModel()
         self.ODB.openDB('POLER')
-        self.HDB = oh.OsintHANA()
-        self.HDB.goLive()
+        self.HDB = oh.HANAModel()
+        #self.HDB.goLive()
         self.PubDB = op.OsintPubDB(ODB)
         self.user = self.find()
         self.threads = []
