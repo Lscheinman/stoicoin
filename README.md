@@ -6,3 +6,15 @@
 - sudo /opt/orientdb/bin/server.sh
 - Set up the root password
 - Go to the http://xxx.xxx.xxx.xxx:2480 to interact with the studio
+
+## Set up Python
+- sudo apt-get update
+- sudo apt-get install build-essential libssl-dev libffi-dev python3-dev python3-pip nginx
+- sudo pip3 install --upgrade pip
+- sudo apt-get update
+- sudo pip3 install virtualenv
+- sudo pip3 install gunicorn
+- sudo virtualenv stoicoinenv
+- source stoicoinenv/bin/activate
+
+
