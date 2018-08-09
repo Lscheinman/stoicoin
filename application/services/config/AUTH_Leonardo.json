@@ -1,0 +1,35 @@
+{
+    "clientid": "sb-6b511de0-8484-4098-a6f8-b1c20a3a4ef9!b4394|foundation-std-mlftrial!b3410",
+        "appname": "6b511de0-8484-4098-a6f8-b1c20a3a4ef9!b4394|foundation-std-mlftrial!b3410",
+        "identityzone": "d063195trial",
+        "identityzoneid": "42f50157-c6d7-44dc-b5c3-7aa5a2bb3e29",
+        "clientsecret": "/JYWwrLnZkkdbKKoMzFDFSSHNPw=",
+        "serviceurls": {
+            "HUMAN_DETECTION_API_URL": "https://mlftrial-human-detection.cfapps.eu10.hana.ondemand.com",
+                "SCENE_TEXT_RECOGNITION_URL": "https://mlftrial-scene-text-recognition.cfapps.eu10.hana.ondemand.com/api/v2alpha1/image/scene-text-recognition",
+                "IMAGE_CLASSIFIER_URL": "https://mlftrial-image-classifier.cfapps.eu10.hana.ondemand.com/api/v2/image/classification",
+                "IMAGE_RETRAIN_API_URL": "https://mlftrial-retrain-image-api.cfapps.eu10.hana.ondemand.com/api/v2/image/retraining",
+                "TEXT_LINEAR_RETRAIN_API_URL": "https://mlftrial-retrain-text-linear-api.cfapps.eu10.hana.ondemand.com/api/v2/text/retraining",
+                "IMAGE_OCR_URL": "https://mlftrial-fs-ocr.cfapps.eu10.hana.ondemand.com/api/v2/image/ocr",
+                "SIMILARITY_SCORING_URL": "https://mlftrial-similarity-scoring.cfapps.eu10.hana.ondemand.com/api/v2/similarity-scoring",
+                "TIME_SERIES_CHANGEPOINT_DETECTION_URL": "https://mlftrial-time-series-changepoint-detection.cfapps.eu10.hana.ondemand.com/api/v2/time-series/changepoint-detection",
+                "DEPLOYMENT_API_URL": "https://mlftrial-deployment-api.cfapps.eu10.hana.ondemand.com",
+                "NN_SEARCH_RETRAIN_API_URL": "https://mlftrial-retrain-ann-api.cfapps.eu10.hana.ondemand.com//api/v2/tabular/ann/indexing",
+                "TRANSLATION_URL": "https://mlftrial-machine-translation.cfapps.eu10.hana.ondemand.com/api/v2/text/translation",
+                "TEXT_CLASSIFIER_URL": "https://mlftrial-text-classifier.cfapps.eu10.hana.ondemand.com/api/v2/text/classification",
+                "TOPIC_DETECTION_URL": "https://mlftrial-topic-detection.cfapps.eu10.hana.ondemand.com/api/v2/text/topic-detection",
+                "NN_SEARCH_URL": "https://mlftrial-nn-search.cfapps.eu10.hana.ondemand.com/api/v2/tabular/ann",
+                "IMAGE_FEATURE_EXTRACTOR_URL": "https://mlftrial-image-feature-extractor.cfapps.eu10.hana.ondemand.com/api/v2/image/feature-extraction",
+                "JOB_SUBMISSION_API_URL": "https://training.trial.eu-central-1.aws.ml.hana.ondemand.com",
+                "MODEL_REPO_URL": "https://mlftrial-model-api.cfapps.eu10.hana.ondemand.com",
+                "INSTANCE_SEGMENTOR_URL": "https://mlftrial-instance-segmentor.cfapps.eu10.hana.ondemand.com/api/v2alpha1/image/instance-segmentor",
+                "FACE_DETECTION_API_URL": "https://mlftrial-face-detector.cfapps.eu10.hana.ondemand.com/api/v2alpha1/image/face-detection",
+                "FACE_FEATURE_EXTRACTION_API_URL": "https://mlftrial-face-feature-extractor.cfapps.eu10.hana.ondemand.com/api/v2alpha1/image/face-feature-extraction"
+                },
+        "url": "https://d063195trial.authentication.eu10.hana.ondemand.com"
+}
+        
+        
+
+
+
