@@ -13,26 +13,18 @@ from threading import Thread
 debugging = False
 if debugging == False:
     from application.services import OsintTwitter as ot
-    #from application.services import OsintGraph as og
     from application.services import OsintPubDB as op
     from application.services import OsintYouTube as oy
     from application.services import HANAModels as HM
     from application.services import OrientModels as om
-    auth = '%s/application/services/config/AUTH_Neo4j.json' % (os.getcwd())
+    from application.services import LeonardoModels as leo
+    from application.services import OsintRSS as rss
+    from application.services import OsintCrawler as oc
 else:
     from services import OsintTwitter as ot #debugging line
     from services import OsintGraph as og #debugging line
-    auth = '%s/services/config/AUTH_Neo4j.json' % (os.getcwd()) # debugging line
     
-#keys = json.loads(open(auth).read())        
-#authenticate(keys['host'], keys['name'], keys['password'])
-#graph = Graph("http://localhost:7474/db/data/")
-#calendar = GregorianCalendar(graph)
-UI5 = False
-#DB = og.OsintGraph()
-#DB = oh.OsintHANA()
-DB = om.OrientModel()
-DB.openDB('POLER')
+DB = om.OrientModel(None)
 class User:
 
     def __init__(self, username):
@@ -41,15 +33,36 @@ class User:
         self.is_active = False
         self.is_anonymous = True
         self.GUID = None
-        #self.oGraph = og.OsintGraph()
-        #self.oGraph.startGraph()
-        self.authpath = '%s/application/services/config/%s' % (os.getcwd(), username)
-        self.datapath = '%s/application/services/data/' % (os.getcwd())
-        self.ODB = om.OrientModel()
+        # Set up the connection to HANA and ConDis
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        try:
+            self.HDB = HM.HANAModel()
+            self.HDB.goLive() 
+            print("[%s_APP-Model-Init]: HANA connection successful" % (TS))
+        except:
+            self.HDB = None
+            print("[%s_APP-Model-Init]: No HANA loaded" % (TS))
+            
+        if '\\' in os.getcwd():
+            if debugging == False:
+                self.authpath = ('%s\\application\\services\\config\\%s' % (os.getcwd(), username))
+                self.datapath  = ('%s\\application\\services\\data\\' % (os.getcwd()))
+            else:
+                self.authpath = ('%s\\config\\%s' % (os.getcwd(), username)) # debugging line  
+                self.datapath = ('%s\\services\\data\\' % (parentdir))
+        else:
+            if debugging == False:
+                self.authpath  = ('%s/application/services/config/' % (os.getcwd(), username))
+                self.datapath  = ('%s/application/services/data/' % (os.getcwd()))
+            else:
+                self.authpath   = ('%s/application/services/config' % (os.getcwd(), username)) # debugging line 
+                self.datapath  = ('%s/application/services/data/' % (parentdir))          
+                
+        self.ODB = om.OrientModel(self.HDB)
         self.ODB.openDB('POLER')
-        self.HDB = HM.HANAModel()
-        #self.HDB.goLive()
+        self.LEO = leo.LeonardoModel(self.ODB)
         self.PubDB = op.OsintPubDB(self.ODB)
+        self.RSS = rss.OsintRSS(self.ODB)
         self.user = self.find()
         self.threads = []
         self.HANA = False
@@ -78,7 +91,7 @@ class User:
         
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         print("[%s_APP-Model-menus]: Front loading menu data with uaa %s" % (TS, self.location))
-        menu = DB.menuFill(self.location)
+        menu = self.ODB.menuFill(self.location)
         
         self.PIRcache = menu['PIR']
         self.STRcache = menu['STR']
@@ -94,17 +107,19 @@ class User:
         return menu
     
     def update_user(self, iObj):
-        message = DB.update_user(iObj)
+        message = self.ODB.update_user(iObj)
         return message         
           
     def find(self):
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         print("[%s_APP-Model-find]: Getting user:" % (TS))
         
-        user = DB.findUser(self.username)
+        user = self.ODB.findUser(self.username)
         if user == None:
             TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_APP-Model-find]: No existing user:" % (TS))            
+            print("[%s_APP-Model-find]: No existing user:" % (TS))  
+            if self.username == 'SYSTEM':
+                self.ODB.initialize_reset()
             
             return False
         print("[%s_APP-Model-find]: User found %s:" % (TS, user['utype']))
@@ -114,7 +129,7 @@ class User:
         self.location = user['location']
         self.utype = user['utype']
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-        print("[%s_APP-Model-find]: User found %s:" % (TS, user))            
+        print("[%s_APP-Model-find]: User found with id %s, role %s, and authorization %s" % (TS, self.GUID, self.utype, self.location))            
         return user
     
     def GUID(self):
@@ -124,7 +139,7 @@ class User:
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         print("[%s_APP-Model-get_task]: Getting task: %s" % (TS, GUID))        
 
-        return DB.get_task(GUID)
+        return self.ODB.get_task(GUID)
     
     def get_entity_profile(self, GUID, TYPE):
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
@@ -132,10 +147,10 @@ class User:
         ProfilePageSize = 100
         Profile = {'ProfileType' : TYPE}
         
-        Profile['Profile'] = DB.get_entity(GUID, TYPE)
+        Profile['Profile'] = self.ODB.get_entity(GUID, TYPE)
         if Profile['Profile']:
             if 'Relations' not in Profile.keys():
-                Profile['Relations'], Profile['pRelCount'], Profile['oRelCount'], Profile['lRelCount'], Profile['eRelCount'] = DB.get_entity_relations(GUID)
+                Profile['Relations'], Profile['pRelCount'], Profile['oRelCount'], Profile['lRelCount'], Profile['eRelCount'] = self.ODB.get_entity_relations(GUID, TYPE)
             Profile['TotalRel'] = len(Profile['Relations'])
             Profile['Person'] = []
             Profile['Object'] = []
@@ -143,12 +158,14 @@ class User:
             Profile['Event'] = []
             
             i = 0
+            print("[%s_APP-Model-get_entity]: Getting relations %s" % (TS, Profile['Relations']))
             for e in Profile['Relations']:
-                entity = DB.get_entity(int(e['GUID']), e['TYPE'].strip())
+                entity = self.ODB.get_entity(int(e['GUID']), e['TYPE'].strip())
                 if entity:
                     entity['RELTYP'] = e['REL']            
                     Profile['%s' % e['TYPE']].append(entity)
                     i+=1
+                    
                 if i > ProfilePageSize:
                     break
             Profile['Profile']['DESC'] = "%s\nTotal of %d relationships.\nPeople:%d\nObjects:%d\nLocations:%d\nEvents:%s" % (Profile['Profile']['DESC'], Profile['TotalRel'], Profile['pRelCount'], Profile['oRelCount'], Profile['lRelCount'], Profile['eRelCount'])
@@ -162,7 +179,7 @@ class User:
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         print("[%s_APP-Model-get_VP_entity_profile]: Getting entity profile: GUID:%s TYPE:%s paths (%d %d)" % (TS, GUID, TYPE, int(spath), int(epath)))
         Profile = self.get_entity_profile(GUID, TYPE)
-        Profile = DB.Graph_VP_Risks(int(spath), int(epath), GUID, Profile)
+        Profile = self.ODB.Graph_VP_Risks(int(spath), int(epath), GUID, Profile)
         
         return Profile       
     
@@ -173,7 +190,7 @@ class User:
         if self.find() == False:
             TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print("[%s_APP-Model-register]: Not found so creating a new user:" % (TS))             
-            self.GUID = DB.insertUser(self.username, bcrypt.encrypt(password), email, tel, location, image, utype)
+            self.GUID = self.ODB.insertUser(self.username, bcrypt.encrypt(password), email, tel, location, image, utype)
             if self.username == 'Tester1':
                 startupthread = Thread(target=self.HDB.firstrun,)
                 startupthread.start()
@@ -208,18 +225,18 @@ class User:
         YCOORD = 0.0
         DESC = '%s %s on %s at %s. %s' % (self.username, CATEGORY, DATE, TIME, intel_DESC)
 
-        intel_GUID = DB.insertEvent(TYPE, CATEGORY, DESC, LANG, CLASS1, TIME, DATE, DTG, XCOORD, YCOORD, ORIGIN, ORIGINREF, LOGSOURCE)
+        intel_GUID = self.ODB.insertEvent(TYPE, CATEGORY, DESC, LANG, CLASS1, TIME, DATE, DTG, XCOORD, YCOORD, ORIGIN, ORIGINREF, LOGSOURCE)
         print("[%s_APP-Model-user_event]: Try User intelGUID = %s" % (TS, intel_GUID))
-        previousIntel = DB.insertRelation(self.GUID, 'User', CATEGORY, intel_GUID, 'Event')    
+        previousIntel = self.ODB.insertRelation(self.GUID, 'Object', CATEGORY, intel_GUID, 'Event')    
         
         return intel_GUID
     
     def pir_justification(self, PIRGUID, UserActionGUID, ActionType):
         
         if ActionType == 'Analysis':
-            DB.insertRelation(UserActionGUID, 'Event', 'AnalysisToSupport', PIRGUID, 'Object')
+            self.ODB.insertRelation(UserActionGUID, 'Event', 'AnalysisToSupport', PIRGUID, 'Object')
         else:
-            DB.insertRelation(UserActionGUID, 'Event', 'CollectionToSupport', PIRGUID, 'Object')
+            self.ODB.insertRelation(UserActionGUID, 'Event', 'CollectionToSupport', PIRGUID, 'Object')
     
     def run_vulchild_recalc(self, spath, epath):
         
@@ -233,7 +250,7 @@ class User:
         DTG = int(today.replace("-", "").replace(":", "").replace(" ", "").strip()) 
         intel_id = self.user_event(CATEGORY, CLASS1, DTG, DATE, TIME, intel_DESC, self.GUID)           
         
-        return DB.Graph_VP_CHILDREN(int(spath), int(epath))
+        return self.ODB.Graph_VP_CHILDREN(int(spath), int(epath))
 
     def run_ta(self, text, TA_CONFIG):
         
@@ -262,15 +279,16 @@ class User:
                   'COUNTS' : {'Objects' : 0, 'Persons' : 0, 'GUID' : []}
                   }
         
+        
         if CLASS1 < 5000:
-            TA_VIEW, TA_RUN = HDB.TextAnalytics(TA_CONFIG, text, TA_RUN)
+            TA_VIEW, TA_RUN = self.HDB.TextAnalytics(TA_CONFIG, text, TA_RUN, self.ODB)
             TA_VIEW, TA_RUN = self.ta_run_counts(TA_VIEW, TA_RUN, intel_id)
         else:
             i = 0
             rounds = math.ceil(CLASS1/5000)
             while i < rounds:
                 partialText = text[:5000]
-                TA_VIEW, TA_RUN = HDB.TextAnalytics(TA_CONFIG, partialText, TA_RUN)
+                TA_VIEW, TA_RUN = self.HDB.TextAnalytics(TA_CONFIG, partialText, TA_RUN, self.ODB)
                 TA_VIEW, TA_RUN = self.ta_run_counts(TA_VIEW, TA_RUN, intel_id)
                 i+=1
                 text = text[5000:CLASS1]
@@ -281,11 +299,11 @@ class User:
         
         for Node in TA_VIEW:
             if Node['TA_TYPE'] == 'Topic':
-                DB.insertRelation(intel_id, 'Event', 'TA_REFERENCE', Node['GUID'], 'Object')
+                self.ODB.insertRelation(intel_id, 'Event', 'TA_REFERENCE', Node['GUID'], 'Object')
                 TA_RUN['COUNTS']['Objects']+=1
                 TA_RUN['COUNTS']['GUID'].append(Node['GUID'])
             elif Node['TA_TYPE'] == 'PERSON':
-                DB.insertRelation(intel_id, 'Event', 'TA_REFERENCE', Node['GUID'], 'Person')
+                self.ODB.insertRelation(intel_id, 'Event', 'TA_REFERENCE', Node['GUID'], 'Person')
                 TA_RUN['COUNTS']['Persons']+=1
                 TA_RUN['COUNTS']['GUID'].append(Node['GUID'])        
         
@@ -306,7 +324,7 @@ class User:
         LOGSOURCE = 'COIN'  
         XCOORD = 0.0
         YCOORD = 0.0
-        wlGUID = DB.insertEvent(TYPE, CATEGORY, DESC, LANG, CLASS1, TIME, DATE, DTG, XCOORD, YCOORD, ORIGIN, ORIGINREF, LOGSOURCE) 
+        wlGUID = self.ODB.insertEvent(TYPE, CATEGORY, DESC, LANG, CLASS1, TIME, DATE, DTG, XCOORD, YCOORD, ORIGIN, ORIGINREF, LOGSOURCE) 
         
         terms = [x.strip() for x in terms.lower().split(",")]
         terms = set(terms)  
@@ -319,8 +337,8 @@ class User:
         
         for term in terms:
             DESC = term
-            termGUID = DB.insertObject(TYPE, CATEGORY, DESC, CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
-            DB.insertRelation(wlGUID, 'Event', 'INCLUDES_TERM', termGUID, 'Object')              
+            termGUID = self.ODB.insertObject(TYPE, CATEGORY, DESC, CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+            self.ODB.insertRelation(wlGUID, 'Event', 'INCLUDES_TERM', termGUID, 'Object')              
     
     def add_task(self, tasktype, subject, tags, actionUserGUID, PIRREF):
         
@@ -340,11 +358,11 @@ class User:
         XCOORD = self.GUID
         YCOORD = actionUserGUID
         DESC = "%s task from %s with subject %s on %s in support of PIR %s." % (tasktype, self.username, subject, DATE, PIRREF)
-        taskGUID = DB.insertEvent(TYPE, CATEGORY, DESC, LANG, CLASS1, TIME, DATE, DTG, int(XCOORD), int(YCOORD), ORIGIN, ORIGINREF, LOGSOURCE)
-        DB.insertRelation(self.GUID, 'Object', 'PUBLISHED_TASK', taskGUID, 'Event')
-        DB.insertRelation(taskGUID, 'Event', 'Supporting', PIRREF, 'Object')
+        taskGUID = self.ODB.insertEvent(TYPE, CATEGORY, DESC, LANG, CLASS1, TIME, DATE, DTG, int(XCOORD), int(YCOORD), ORIGIN, ORIGINREF, LOGSOURCE)
+        self.ODB.insertRelation(self.GUID, 'Object', 'PUBLISHED_TASK', taskGUID, 'Event')
+        self.ODB.insertRelation(taskGUID, 'Event', 'Supporting', PIRREF, 'Object')
         if actionUserGUID != None:
-            DB.insertRelation(taskGUID, 'Event', 'TASKED_TO', actionUserGUID, 'Object')
+            self.ODB.insertRelation(taskGUID, 'Event', 'TASKED_TO', actionUserGUID, 'Object')
         
         TASK = {'GUID' : str(taskGUID), 'CLASS1' : tasktype, 'DESC' : subject}    
         # TODO make an object for the task so it can be updated during the process
@@ -361,14 +379,14 @@ class User:
         for tag in tags:
             DESC = tag
             CLASS1 = len(tag)
-            tagGUID = DB.insertObject(TYPE, CATEGORY, DESC, CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
-            DB.insertRelation(taskGUID, 'Event', 'INCLUDES_TAG', tagGUID, 'Object')    
+            tagGUID = self.ODB.insertObject(TYPE, CATEGORY, DESC, CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+            self.ODB.insertRelation(taskGUID, 'Event', 'INCLUDES_TAG', tagGUID, 'Object')    
 
         return TASK
     
     def delete_user(self, username):
         MSG = {'messages' : []}
-        MSG['messages'].append(DB.delete_user(username))
+        MSG['messages'].append(self.ODB.delete_user(username))
         return MSG
     
     def get_user_profile(self, GUID):
@@ -376,7 +394,7 @@ class User:
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         print("[%s_APP-Model-get_user_profile]: Getting user:" % (TS))    
         
-        return DB.get_user_profile(GUID)   
+        return self.ODB.get_user_profile(GUID)   
     
     def user_tokens(self, iObj, username):
         
@@ -410,13 +428,13 @@ class User:
         intel_GUID = self.user_event(CATEGORY, CLASS1, DTG, DATE, TIME, intel_DESC, GUID)
         
         if StoredProcedureType == Locations:
-            MSG['messages'].append(DB.preLoadLocations())
+            MSG['messages'].append(self.ODB.preLoadLocations())
         elif StoredProcedureType == People:
-            MSG['messages'].append(DB.preLoadPeople())
+            MSG['messages'].append(self.ODB.preLoadPeople())
         elif StoredProcedureType == Reset:
-            MSG['messages'].append(DB.initialize_reset())  
+            MSG['messages'].append(self.ODB.initialize_reset())  
         elif StoredProcedureType == SPF:
-            MSG['messages'].append(DB.SPF_Run_Full())           
+            MSG['messages'].append(self.ODB.SPF_Run_Full())           
           
         return MSG
     
@@ -425,6 +443,7 @@ class User:
         if TokenType == 'twitter':
             auth = '%s_AUTH_Twitter.json' % (self.authpath)
         with open(auth) as json_file:
+            print('Getting auth %s' % auth)
             return json.load(json_file)  
         
     def get_News(self):
@@ -438,37 +457,37 @@ class User:
       
         if iObj['SOURCE_SPF_CRIMES2'][0] != 'NA':
             if iObj['SOURCE_SPF_CRIMES2'][0]  == 'SPF_CRIMES2_C_OFFENCE_CODE':
-                MSG['messages'].append(DB.SPF_CRIMES2_C_OFFENCE_CODE())
+                MSG['messages'].append(self.ODB.SPF_CRIMES2_C_OFFENCE_CODE())
             elif iObj['SOURCE_SPF_CRIMES2'][0]  == 'SPF_CRIMES2_TB_CONNECTED_REPORT':
-                MSG['messages'].append(DB.SPF_CRIMES2_TB_CONNECTED_REPORT())
+                MSG['messages'].append(self.ODB.SPF_CRIMES2_TB_CONNECTED_REPORT())
             elif iObj['SOURCE_SPF_CRIMES2'][0]  == 'SPF_CRIMES2_TB_PERSON_BIO':
-                MSG['messages'].append(DB.SPF_CRIMES2_TB_PERSON_BIO())
+                MSG['messages'].append(self.ODB.SPF_CRIMES2_TB_PERSON_BIO())
             elif iObj['SOURCE_SPF_CRIMES2'][0]  == 'SPF_CRIMES2_TB_OFFENCE':
-                MSG['messages'].append(DB.SPF_CRIMES2_TB_OFFENCE())
+                MSG['messages'].append(self.ODB.SPF_CRIMES2_TB_OFFENCE())
             elif iObj['SOURCE_SPF_CRIMES2'][0]  == 'SPF_CRIMES2_TB_CASE_PERSON_RESULT':
-                MSG['messages'].append(DB.SPF_CRIMES2_TB_CASE_PERSON_RESULT())       
+                MSG['messages'].append(self.ODB.SPF_CRIMES2_TB_CASE_PERSON_RESULT())       
             elif iObj['SOURCE_SPF_CRIMES2'][0]  == 'SPF_CRIMES2_TEST_TB_CASE':
-                MSG['messages'].append(DB.SPF_CRIMES2_TEST_TB_CASE())                    
+                MSG['messages'].append(self.ODB.SPF_CRIMES2_TEST_TB_CASE())                    
         
         if iObj['SOURCE_SPF_OTTER'][0]  != 'NA':
             if iObj['SOURCE_SPF_OTTER'][0] == 'SPF_OTTER_VEHICLE_INFO':
-                MSG['messages'].append(DB.SPF_OTTER_VEHICLE_INFO())
+                MSG['messages'].append(self.ODB.SPF_OTTER_VEHICLE_INFO())
             if iObj['SOURCE_SPF_OTTER'][0] == 'SPF_OTTER_PHONE':
-                MSG['messages'].append(DB.SPF_OTTER_PHONE())                
+                MSG['messages'].append(self.ODB.SPF_OTTER_PHONE())                
                    
         if iObj['SOURCE_SPF_PDS'][0]  != 'NA':
             if iObj['SOURCE_SPF_PDS'][0]  == 'SPF_PDS_TB_NRIC_INFO':
-                MSG['messages'].append(DB.SPF_PDS_TB_NRIC_INFO())  
+                MSG['messages'].append(self.ODB.SPF_PDS_TB_NRIC_INFO())  
             if iObj['SOURCE_SPF_PDS'][0]  == 'SPF_PDS_TB_PERSON_VIEW':
-                MSG['messages'].append(DB.SPF_PDS_TB_PERSON_VIEW())                   
+                MSG['messages'].append(self.ODB.SPF_PDS_TB_PERSON_VIEW())                   
         
         if iObj['SOURCE_SPF_FOCUS'][0]  != 'NA':
             if iObj['SOURCE_SPF_FOCUS'][0]  == 'SPF_FOCUS_TB_IR_VEHICLE':
-                MSG['messages'].append(DB.SPF_FOCUS_TB_IR_VEHICLE()) 
+                MSG['messages'].append(self.ODB.SPF_FOCUS_TB_IR_VEHICLE()) 
             elif iObj['SOURCE_SPF_FOCUS'][0]  == 'SPF_FOCUS_TB_IR_INCIDENT':
-                MSG['messages'].append(DB.SPF_FOCUS_TB_IR_INCIDENT()) 
+                MSG['messages'].append(self.ODB.SPF_FOCUS_TB_IR_INCIDENT()) 
             elif iObj['SOURCE_SPF_FOCUS'][0]  == 'SPF_FOCUS_TB_IR_PERSON_INVOLVED':
-                MSG['messages'].append(DB.SPF_FOCUS_TB_IR_PERSON_INVOLVED())             
+                MSG['messages'].append(self.ODB.SPF_FOCUS_TB_IR_PERSON_INVOLVED())             
                 
                 
                    
@@ -481,10 +500,10 @@ class User:
       
         if iObj['SOCIAL_SERVICES'][0] != 'NA':
             if iObj['SOCIAL_SERVICES'][0]  == 'INTAKE_REGISTRY':
-                self.PubDB.ETLSocial2Graph(DB.getSocialData())
+                self.PubDB.ETLSocial2Graph(self.ODB.getSocialData())
         if iObj['HEALTH_SERVICES'][0]  != 'NA':
             if iObj['HEALTH_SERVICES'][0] == 'INTAKE_REGISTRY':
-                MSG['messages'].append(DB.HEALTH_SERVICES_INTAKE_REGISTRY(self.PubDB))           
+                MSG['messages'].append(self.ODB.HEALTH_SERVICES_INTAKE_REGISTRY(self.PubDB))           
         print(MSG)       
         return MSG    
     
@@ -516,49 +535,49 @@ class User:
         
         # Create event for adding the intel and relate it to the user
         if iObj['iType'].lower() == 'person':
-            GUID = DB.insertPerson(iObj['GEN'], iObj['FName'], iObj['LName'], iObj['DOB'], iObj['POB'], iObj['ORIGIN'], iObj['ORIGINREF'], iObj['LOGSOURCE'], iObj['Description'])
+            GUID = self.ODB.insertPerson(iObj['GEN'], iObj['FName'], iObj['LName'], iObj['DOB'], iObj['POB'], iObj['ORIGIN'], iObj['ORIGINREF'], iObj['LOGSOURCE'], iObj['Description'])
             NAME = "%s %s" % (iObj['FName'], iObj['LName'])
             intel_DESC = 'Person named %s %s' % (iObj['FName'], iObj['LName'])
             intel_GUID = self.user_event('PUBLISHED_INTEL', iObj['iType'], DTG, DATE, TIME, intel_DESC, self.GUID) 
-            DB.insertRelation(GUID, 'Person', 'BORN_IN', iObj['POB'], 'Location')
-            BIRTH = DB.insertEvent('Birth', 'Human', '%s %s born on %s.' % (iObj['FName'], iObj['LName'], iObj['DOB']), 'en', '1', TIME, iObj['DOB'], DTG, XCOORD, YCOORD, iObj['ORIGIN'], iObj['ORIGINREF'], iObj['LOGSOURCE'])
-            DB.insertRelation(GUID, 'Person', 'BORN_ON', BIRTH, 'Event')
-            DB.insertRelation(BIRTH, 'Event', 'OccurredAt', iObj['POB'], 'Location')
-            DB.insertRelation(intel_GUID, 'Event', 'AnalysisToSupport', iObj['ORIGIN'], 'Object')
-            previousIntel = DB.insertRelation(intel_GUID, 'Event', 'INVOLVES', GUID, iObj['iType']) 
+            self.ODB.insertRelation(GUID, 'Person', 'BORN_IN', iObj['POB'], 'Location')
+            BIRTH = self.ODB.insertEvent('Birth', 'Human', '%s %s born on %s.' % (iObj['FName'], iObj['LName'], iObj['DOB']), 'en', '1', TIME, iObj['DOB'], DTG, XCOORD, YCOORD, iObj['ORIGIN'], iObj['ORIGINREF'], iObj['LOGSOURCE'])
+            self.ODB.insertRelation(GUID, 'Person', 'BORN_ON', BIRTH, 'Event')
+            self.ODB.insertRelation(BIRTH, 'Event', 'OccurredAt', iObj['POB'], 'Location')
+            self.ODB.insertRelation(intel_GUID, 'Event', 'AnalysisToSupport', iObj['ORIGIN'], 'Object')
+            previousIntel = self.ODB.insertRelation(intel_GUID, 'Event', 'INVOLVES', GUID, iObj['iType']) 
             iObj['iType'] = 'PERSONS'
              
         elif iObj['iType'].lower() == 'object':
             NAME = "%s %s" % (iObj['oCATEGORY'], iObj['oDESC'])
-            GUID = DB.insertObject(iObj['oTYPE'], iObj['oCATEGORY'], iObj['oDESC'], iObj['oCLASS1'] , iObj['oCLASS2'] , iObj['oCLASS3'], iObj['ORIGIN'], iObj['ORIGINREF'], iObj['LOGSOURCE'])
+            GUID = self.ODB.insertObject(iObj['oTYPE'], iObj['oCATEGORY'], iObj['oDESC'], iObj['oCLASS1'] , iObj['oCLASS2'] , iObj['oCLASS3'], iObj['ORIGIN'], iObj['ORIGINREF'], iObj['LOGSOURCE'])
             intel_DESC = 'Object type %s and category %s with description %s.' % (iObj['oTYPE'], iObj['oCATEGORY'], iObj['oDESC'])
             intel_GUID = self.user_event('PUBLISHED_INTEL', iObj['iType'], DTG, DATE, TIME, intel_DESC, self.GUID)  
-            DB.insertRelation(intel_GUID, 'Event', 'AnalysisToSupport', iObj['ORIGIN'], 'Object')
+            self.ODB.insertRelation(intel_GUID, 'Event', 'AnalysisToSupport', iObj['ORIGIN'], 'Object')
             if iObj['Locations'] != 'NA':
-                DB.insertRelation(GUID, 'Object', 'REPORTED_AT', iObj['Locations'], 'Location')
-            previousIntel = DB.insertRelation(intel_GUID, 'Event', 'INVOLVES', GUID, iObj['iType'])            
+                self.ODB.insertRelation(GUID, 'Object', 'REPORTED_AT', iObj['Locations'], 'Location')
+            previousIntel = self.ODB.insertRelation(intel_GUID, 'Event', 'INVOLVES', GUID, iObj['iType'])            
             iObj['iType'] = 'OBJECTS'
         
         elif iObj['iType'].lower() == 'location':
-            GUID = DB.insertLocation(iObj['lTYPE'], iObj['lDESC'], iObj['lXCOORD'], iObj['lYCOORD'], iObj['lZCOORD'], iObj['lCLASS1'], iObj['ORIGIN'], iObj['ORIGINREF'], iObj['LOGSOURCE'])
+            GUID = self.ODB.insertLocation(iObj['lTYPE'], iObj['lDESC'], iObj['lXCOORD'], iObj['lYCOORD'], iObj['lZCOORD'], iObj['lCLASS1'], iObj['ORIGIN'], iObj['ORIGINREF'], iObj['LOGSOURCE'])
             NAME = "%s" % (iObj['lDESC'])
             intel_DESC = 'Location type %s with description %s at %s, %s' % (iObj['lTYPE'], iObj['lDESC'], iObj['lXCOORD'], iObj['lYCOORD'])
             intel_GUID = self.user_event('PUBLISHED_INTEL', iObj['iType'], DTG, DATE, TIME, intel_DESC, self.GUID) 
-            DB.insertRelation(intel_GUID, 'Event', 'AnalysisToSupport', iObj['ORIGIN'], 'Object')
+            self.ODB.insertRelation(intel_GUID, 'Event', 'AnalysisToSupport', iObj['ORIGIN'], 'Object')
             if iObj['Locations'] != 'NA':
-                DB.insertRelation(GUID, 'Location', 'REPORTED_WITH', iObj['Locations'], 'Location')  
-            previousIntel = DB.insertRelation(intel_GUID, 'Event', 'INVOLVES', GUID, iObj['iType'])
+                self.ODB.insertRelation(GUID, 'Location', 'REPORTED_WITH', iObj['Locations'], 'Location')  
+            previousIntel = self.ODB.insertRelation(intel_GUID, 'Event', 'INVOLVES', GUID, iObj['iType'])
             iObj['iType'] = 'LOCATIONS'
             
         elif iObj['iType'].lower() == 'event':
             print("[%s_APP-Model-add_intel]: Adding Event:" % (TS)) 
-            GUID = self.HDB.insertEvent(iObj['eTYPE'], iObj['eCATEGORY'], iObj['eDESC'], LANG, iObj['eCLASS1'], iObj['eTIME'], iObj['eDATE'], DTG, XCOORD, YCOORD, iObj['ORIGIN'], iObj['ORIGINREF'], iObj['LOGSOURCE'])            
+            GUID = self.ODB.insertEvent(iObj['eTYPE'], iObj['eCATEGORY'], iObj['eDESC'], LANG, iObj['eCLASS1'], iObj['eTIME'], iObj['eDATE'], DTG, XCOORD, YCOORD, iObj['ORIGIN'], iObj['ORIGINREF'], iObj['LOGSOURCE'])            
             NAME = "%s" % (iObj['eDESC'])
             intel_DESC = 'Event %s %s with description %s at %s %s' % (iObj['eTYPE'], iObj['eCATEGORY'], iObj['eDESC'], DATE, TIME)
             intel_GUID = self.user_event('PUBLISHED_INTEL', iObj['iType'], DTG, DATE, TIME, intel_DESC, self.GUID) 
-            DB.insertRelation(intel_GUID, 'Event', 'AnalysisToSupport', iObj['ORIGIN'], 'Object')
+            self.ODB.insertRelation(intel_GUID, 'Event', 'AnalysisToSupport', iObj['ORIGIN'], 'Object')
             if iObj['Locations'] != 'NA' :
-                self.HDB.insertRelation(GUID, 'Location', 'REPORTED_AT', iObj['Locations'], 'Location')     
+                self.ODB.insertRelation(GUID, 'Location', 'REPORTED_AT', iObj['Locations'], 'Location')     
             previousIntel = self.HDB.insertRelation(intel_GUID, 'Event', 'INVOLVES', GUID, iObj['iType'])
             iObj['iType'] = 'EVENTS'
             
@@ -608,18 +627,18 @@ class User:
             TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print("[%s_APP-add_intel]: Adding %s relation from %s to %s-%s:" % (TS, iObj['RELTYP'], AGUID, ttype, BGUID))                  
                 
-            GUID = DB.insertRelation(AGUID, stype, iObj['RELTYP'], BGUID, ttype)
+            GUID = self.ODB.insertRelation(AGUID, stype, iObj['RELTYP'], BGUID, ttype)
 
             if GUID != True:
                 messages.append('Relationship %s exists between %s and %s.' % (iObj['RELTYP'], AGUID, BGUID)) 
                 
             else:
                 intel_DESC = 'Relationship of type %s created between %s and %s.' % (iObj['RELTYP'], AGUID, BGUID)
-                DB.insertRelation(intel_GUID, 'Event', 'AnalysisToSupport', iObj['ORIGIN'], 'Object')
+                self.ODB.insertRelation(intel_GUID, 'Event', 'AnalysisToSupport', iObj['ORIGIN'], 'Object')
                 GUID = self.user_event('PUBLISHED_INTEL', iObj['iType'], DTG, DATE, TIME, intel_DESC, self.GUID)                      
                 messages.append('Relationship %s created between %s and %s.' % (iObj['RELTYP'], AGUID, BGUID))
-                GUID = DB.insertRelation(intel_GUID, 'Event', 'INVOLVES', AGUID, stype)
-                GUID = DB.insertRelation(intel_GUID, 'Event', 'INVOLVES', BGUID, ttype)                       
+                GUID = self.ODB.insertRelation(intel_GUID, 'Event', 'INVOLVES', AGUID, stype)
+                GUID = self.ODB.insertRelation(intel_GUID, 'Event', 'INVOLVES', BGUID, ttype)                       
         
         self.pir_justification(iObj['ORIGIN'], intel_GUID, 'Analysis')
         
@@ -635,24 +654,7 @@ class User:
         query = '''MATCH (a:User)-[r]-(b)-[]-(c) WHERE b.TYPE = 'UserAction' RETURN a.username AS username, type(r) AS uatype, b.DESC AS description, b.TIME AS time, b.DATE AS date, b.GUID AS GUID, COUNT(c) AS resultcount, b.DTG AS DTG ORDER BY DTG DESC'''
         #qRun = self.oGraph.run(query)
         results = []
-        '''
-        for e in qRun:
-            if UI5 == True:
-                data = {}
-                data['username']      = e['username']
-                data['uatype']        = e['uatype']
-                data['description']   = e['description']
-                data['date']          = e['date']
-                data['GUID']          = e['GUID']
-                data['resultcount']   = e['resultcount']
-                data['DTG']           = e['DTG']
-                results.append(data)      
-            else:
-                results.append(e)  
-                
-        if UI5 == True:
-            results = json.dumps(results)   
-        '''
+
         return results
        
     def recent_posts(self, n):
@@ -750,7 +752,125 @@ class User:
             messages.append('Previous Search %s' % NoPreviousSearch )
         else:
             messages.append('Search too recently executed.')
-        return messages        
+        return messages 
+    
+    def run_gdelt(self, iObj):
+        # Create the event of this activity
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        intel_DESC = '%s running gdelt at %s.' % (TS, self.username)     
+        today = datetime.now().strftime("%F %H:%M:%S")
+        CATEGORY = 'COLLECT_GDELT'
+        CLASS1  = 'OSINT'
+        DATE = today[:10]
+        TIME = today[-8:]
+        DTG = int(today.replace("-", "").replace(":", "").replace(" ", "").strip())           
+        intel_id = self.user_event(CATEGORY, CLASS1, DTG, DATE, TIME, intel_DESC, self.GUID)         
+        message = {'response' : 200, 'text' : 'GDELT query running'}
+        
+        gB = iObj['GoldsteinBin'][0]
+        if gB == ' ':
+            gB = ''
+        elif gB == 'pos':
+            gB = '<'
+        else:
+            gB = '>'
+        
+        qVars = {'Type' : 'Events',
+                 'sDTG' : int(iObj['searchdate'][0][:8]),
+                 'eDTG' : int(iObj['searchdate'][0][-8:]),
+                 'Persons' : '%s' % iObj['Persons'][0],
+                 'LIMIT' : 1000,
+                 'Actor1' : '%s' % iObj['Actor1Name'][0],
+                 'ActionGeo' : '%s' % iObj['ActionGeo'][0],
+                 'Actor1Code' : '%s' % iObj['Actor1Code'][0],
+                 'Actor2Name' : '%s' % iObj['Actor2Name'][0],
+                 'GoldsteinBin' : gB,
+                 'GUID' : intel_id,
+                 'DESC' : intel_DESC, 
+                 'DATE' : DATE, 
+                 'CATEGORY' : CATEGORY,
+                 'CLASS1' : CLASS1,
+                 'Person' : [],
+                 'Object' : [],
+                 'Location' : [],
+                 'Event'  : [],
+                 'COUNTS' : {'Objects' : 0, 'Persons' : 0, 'GUID' : []}               
+        }
+        print(qVars)
+        t = Thread(target=self.RSS.getLiveGDELT, args=(qVars,))
+        t.start()
+        
+        return message
+    
+    def run_crawler(self, iObj):
+        
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        
+        def run_cycle(crawler):
+            time.sleep(2)
+            crawler.getLinks()
+            crawler.getText()
+            crawler.getSecondDegree()  
+            crawler.stopDriver()
+            print(crawler.data['links'])
+            O_TYPE = 'Website'
+            O_CATEGORY = 'News'
+            O_DESC = iObj['startURL'][0]
+            O_CLASS1 = O_CLASS2 = O_CLASS3 = E_XCOORD = E_YCOORD = 0
+            O_ORIGIN = E_ORIGIN = 'OsintCrawler' 
+            O_LOGSOURCE = O_ORIGINREF = E_LOGSOURCE = E_ORIGINREF = 'A1'
+            
+            E_TYPE = 'OSINT'
+            E_CATEGORY = 'WebCrawl'
+            E_DESC = 'Crawl of %s on %s' % (O_DESC, TS)
+            E_LANG = iObj['searchLanguage'][0]
+            E_CLASS1 = crawler.linkcount
+            E_TIME = TS[-8:]
+            E_DATE = TS[:10]
+            E_DTG = str(TS).replace(' ', '').replace(':', '').replace('-', '')
+            
+            websiteGUID = self.ODB.insertObject(O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3, O_ORIGIN, O_ORIGINREF, O_LOGSOURCE)
+            crawlGUID   = self.ODB.insertEvent(E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE)
+            self.ODB.insertRelation(crawlGUID, 'Event', 'OccurredAt', websiteGUID, 'Object')
+            for l in crawler.data['links']:
+                E_TYPE = 'OSINT'
+                E_CATEGORY = 'NewsStory'
+                try:
+                    E_DESC = str(l['text']) + ' ' + str(l['fulltext'])
+                except:
+                    E_DESC = l['text']
+                E_CLASS1   = len(E_DESC)
+                try:
+                    E_DATE     = l['date']
+                except:
+                    E_DATE     = TS[:10]
+                storyGUID = self.ODB.insertEvent(E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE)
+                self.ODB.insertRelation(crawlGUID, 'Event', 'ReferenceLink', storyGUID, 'Event')
+                self.ODB.insertRelation(websiteGUID, 'Object', 'Published', storyGUID, 'Event')
+                self.run_ta(E_DESC, 'EXTRACTION_CORE')
+        
+        crawler = oc.Crawler(iObj)
+        if iObj['searchEngine'][0] == 'true':
+            print("Starting Chrome")
+            crawler.startChrome()
+        else:
+            print("Starting FireFox")
+            crawler.startFireFox()
+            
+        if iObj['searchTerms'][0] != '':
+            crawler.getSearch()
+            time.sleep(2)
+            crawler.getLinks()
+        else:
+            crawler.getLinks()
+        #run_cycle(crawler)
+        T = Thread(target=run_cycle, args=(crawler,))
+        T.start()
+
+        message = {'response' : 200}
+        text = 'Started crawl of %s and %d links at %s' % (crawler.startURL, crawler.linkcount, TS)
+        message['text'] = text
+        return message
     
     def run_twitter(self, PIRREF, searchtype, searchterm, latitude, longitude, username, origin):
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
@@ -767,28 +887,29 @@ class User:
         MSG['GUID'] = self.user_event(CATEGORY, CLASS1, DTG, DATE, TIME, intel_DESC, self.GUID)    
 
         auth = self.load_user_tokens('twitter', username)        
-        self.Twitter = ot.OsintTwitter(DB, auth)
-
+        self.Twitter = ot.OsintTwitter(self.ODB, auth)
         MSG['messages'].append("[%s_APP-Model-run_twitter]: Received: %s %s. But no token found." % (TS, searchtype, searchterm))
 
         channel = 'twitter'
         searchtermplus = "%s-%s-%s" % (searchterm, latitude, longitude)
-        NoPreviousSearch, MSG['GUID'] = self.log_user_search(channel, searchtype, searchtermplus)
-        self.pir_justification(PIRREF, MSG['GUID'], 'Collection')
+        #NoPreviousSearch, MSG['GUID'] = self.log_user_search(channel, searchtype, searchtermplus)
+        #self.pir_justification(PIRREF, MSG['GUID'], 'Collection')
         NoPreviousSearch = True
         if NoPreviousSearch != False:
             
             self.Twitter.setSearchID(MSG['GUID'])
             st = searchterm
+            
             if searchtype == 'username':
-                t1 = Thread(target=self.Twitter.getAllTweets, args=(st, searchtype,))
-                t1.start()  
-                #self.Twitter.getAllTweets(st, searchtype)
+                #t1 = Thread(target=self.Twitter.getAllTweets, args=(st, searchtype,))
+                #t1.start()  
+                self.Twitter.getAllTweets(st, searchtype)
                 message  = 'Twitter username collection on %s started.' % searchterm
                 MSG['messages'] .append(message)
             elif searchtype == 'term':
-                t2 = Thread(target=self.Twitter.getAllTweets, args=(st, searchtype,))
-                t2.start() 
+                #t2 = Thread(target=self.Twitter.getAllTweets, args=(st, searchtype,))
+                #t2.start() 
+                print("!!!!!!!!!-----------")
                 self.Twitter.getAllTweets(searchterm, 'hashtags')
                 message = 'Twitter term collection on %s started.' % searchterm
                 MSG['messages'].append(message)                
@@ -822,6 +943,14 @@ class User:
 
         return MSG
         
+    def process_photos(self):
+        
+        r = self.LEO.getPhotos()
+        message = 'Step 1: %d new photos loaded into %d folder(s).\nStep 2: Processing...' % (len(r['photos']), len(r['folders']))
+        t = Thread(target=self.LEO.getPersonPhotos(),)
+        t.start()
+        return message
+
     def run_acled(self, PIRREF, searchdate, searchlocation):
 
         searchtermplus = "%s-%s-%s" % (PIRREF, searchdate, searchlocation)
@@ -907,8 +1036,8 @@ class User:
         LOGSOURCE = 'COIN' 
         DESC     = 'Search type %s on channel %s for %s on %s.' % (searchtype, channel, searchterm, DATE)
         
-        eGUID = DB.insertEvent(TYPE, CATEGORY, DESC, LANG, CLASS1, TIME, DATE, DTG, XCOORD, YCOORD, ORIGIN, ORIGINREF, LOGSOURCE)
-        NoPreviousSearch = DB.insertRelation(self.GUID, 'User', 'SEARCHED', eGUID, 'Event') 
+        eGUID = self.ODB.insertEvent(TYPE, CATEGORY, DESC, LANG, CLASS1, TIME, DATE, DTG, XCOORD, YCOORD, ORIGIN, ORIGINREF, LOGSOURCE)
+        NoPreviousSearch = self.ODB.insertRelation(self.GUID, 'User', 'SEARCHED', eGUID, 'Event') 
         # The search was executed before, but how long ago
         if NoPreviousSearch == False:
 
@@ -919,7 +1048,7 @@ class User:
     def merge_entities(self, iObj):
         
         messages = {}
-        messages['message'] = DB.merge_entities('person', iObj['AGUID'], iObj['PGUID'])
+        messages['message'] = self.ODB.merge_entities('person', iObj['AGUID'], iObj['PGUID'])
       
         return messages
     
@@ -933,17 +1062,17 @@ class User:
         TIME = today[-8:]
         DTG = int(today.replace("-", "").replace(":", "").replace(" ", "").strip())  
         intel_GUID = self.user_event('PROCESSED_INTEL', fileType, DTG, DATE, TIME, 'Extract from %s' % filename, GUID)
-        DB.insertRelation(intel_GUID, 'Event', 'AnalysisToSupport', iObj['ORIGIN'], 'Object')
+        self.ODB.insertRelation(intel_GUID, 'Event', 'AnalysisToSupport', GUID, 'Object')
         self.PubDB.setProcessID(intel_GUID)
         view = self.PubDB.getFile(fileURL)
-
+        
         if fileType == 'POLICE':
             t = Thread(target=self.PubDB.ETLPolice2Graph, args=(view,))
             t.start()
         
         elif fileType == 'SOCIAL':
             t = Thread(target=self.PubDB.ETLSocial2Graph, args=(view,))
-            t.start()        
+            t.start()   
         
         elif fileType == 'EDUCATION':
             message = self
@@ -981,9 +1110,9 @@ class User:
         tags = [x.strip() for x in PIR['CLASS3'].lower().split(",")]
         tags = set(tags)
         PIR['CLASS3'] = len(tags)
-        PIRGUID = DB.insertObject('PIR', PIR['CATEGORY'], PIR['DESC'], PIR['CLASS1'], PIR['CLASS2'], PIR['CLASS3'], ORIGIN, ORIGINREF, LOGSOURCE) 
-        DB.insertRelation(actionGUID, 'Event', 'INVOLVES', PIRGUID, 'Object')            
-        DB.insertRelation(PIRGUID, 'Object', 'AnalysisToSupport', int(CLASS1), 'Object')
+        PIRGUID = self.ODB.insertObject('PIR', PIR['CATEGORY'], PIR['DESC'], PIR['CLASS1'], PIR['CLASS2'], PIR['CLASS3'], ORIGIN, ORIGINREF, LOGSOURCE) 
+        self.ODB.insertRelation(actionGUID, 'Event', 'INVOLVES', PIRGUID, 'Object')            
+        self.ODB.insertRelation(PIRGUID, 'Object', 'AnalysisToSupport', int(CLASS1), 'Object')
         if PIR['CLASS3'] != '': 
             TYPE = "Tag"
             CATEGORY = "Term"
@@ -992,11 +1121,11 @@ class User:
             ORIGIN = 'COIN%s' % (str(self.GUID))
             for tag in tags:
                 ORIGINREF = 'COINTAG%s' % tag
-                tagGUID = DB.insertObject(TYPE, CATEGORY, tag, CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+                tagGUID = self.ODB.insertObject(TYPE, CATEGORY, tag, CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
                 DB.insertRelation(PIRGUID, 'Object', 'INCLUDES_TAG', tagGUID, 'Object')               
         
         for loc in PIR['Locations']:
-            DB.insertRelation(PIRGUID, 'Object', 'INVOLVES', loc, 'Location')        
+            self.ODB.insertRelation(PIRGUID, 'Object', 'INVOLVES', loc, 'Location')        
 
         # Add relation to parent and child (supporting/answers) to other fields.
 
@@ -1028,13 +1157,13 @@ class User:
         YCOORD = 0.0 
         STRAT['CLASS2'] = 1
         STRAT['CLASS3'] = len(CLASS1)
-        STRATGUID = DB.insertObject('STRAT', STRAT['CATEGORY'], STRAT['DESC'], STRAT['CLASS1'], STRAT['CLASS2'], STRAT['CLASS3'], ORIGIN, ORIGINREF, LOGSOURCE) 
-        DB.insertRelation(actionGUID, 'Event', 'INVOLVES', STRATGUID, 'Object')  
+        STRATGUID = self.ODB.insertObject('STRAT', STRAT['CATEGORY'], STRAT['DESC'], STRAT['CLASS1'], STRAT['CLASS2'], STRAT['CLASS3'], ORIGIN, ORIGINREF, LOGSOURCE) 
+        self.ODB.insertRelation(actionGUID, 'Event', 'INVOLVES', STRATGUID, 'Object')  
         
         # Get the locations in the strategy
         if STRAT['Locations'] != None:
             for loc in STRAT['Locations']:
-                DB.insertRelation(STRATGUID, 'Event', 'INVOLVES', loc, 'Location')        
+                self.ODB.insertRelation(STRATGUID, 'Event', 'INVOLVES', loc, 'Location')        
         newSTRAT = {'GUID' : STRATGUID,
                     'DESC' : intel_DESC,
                     'NAME' : "%s %s" % (STRAT['CATEGORY'], STRAT['CLASS1'])
@@ -1079,43 +1208,14 @@ def todays_recent_intel(n):
     query = "MATCH (user:User)-[:PUBLISHED_INTEL]->(a) RETURN user.username AS username, a.GUID AS idintel, a.ORIGIN AS date, user.GUID AS iduser, a.DESC AS description ORDER BY date DESC LIMIT %d" % (n)
     
     results = []
-    '''
-    qRun = graph.run(query)
-    
-    for e in qRun:
-        if UI5 == True:
-            data = {}
-            data['username']    = e['username']
-            data['idintel']     = e['idintel']
-            data['date']        = e['date']
-            data['iduser']      = e['iduser']
-            data['description'] = e['description']            
-            results.append(data)      
-        else:
-            results.append(e)   
-    '''
+
     return results
 
 def todays_recent_searches(n):
     today = datetime.now().strftime("%F")
     query = "MATCH (user:User)-[:SEARCHED]-(a) RETURN user.username AS username, a.DESC AS description, a.DATE AS date ORDER BY date DESC LIMIT %d" % (n)
     results = []
-    '''
-    qRun = graph.run(query)
-    
-    for e in qRun:
-        if UI5 == True:
-            data = {}
-            data['username']      = e['username']
-            data['description']   = e['description']
-            data['date']          = e['date']
-            results.append(data)      
-        else:
-            results.append(e)  
-            
-    if UI5 == True:
-        results = json.dumps(results) 
-    '''
+
     return results
 
 def recent_all():
@@ -1209,28 +1309,7 @@ def dashboard(dashtype):
         b.TYPE AS subtype, a.CATEGORY AS category, b.DESC AS odesc, b.FNAME AS description'''
     
     results = []
-    '''
-    qRun = graph.run(query)
-    
-    for e in qRun:
-        if UI5 == True:
-            data = {}
-            data['DTG']         = e['DTG']
-            data['date']        = e['date']
-            data['time']        = e['time']
-            data['eventdesc']   = e['eventdesc']
-            data['entitytype']  = e['entitytype']
-            data['subtype']     = e['subtype']
-            data['category']    = e['category']
-            data['odesc']       = e['odesc']
-            data['description'] = e['description']
-            results.append(data)      
-        else:
-            results.append(e)  
-            
-    if UI5 == True:
-        results = json.dumps(results)    
-    '''     
+ 
     return results
 
 def get_uploads():
@@ -1335,92 +1414,7 @@ def get_entity_profile(GUID):
     type(r) AS reltyp''' % GUID
     
     results = []
-    '''
-    qRun = graph.run(query)
-    
-    
-    pcount = 0
-    ocount = 0
-    lcount = 0
-    ecount = 0
-    rcount = 0
-    
-    for e in qRun:
-        data = {}
-        # All data about the profile node
-        data['nGUID']     = e['nGUID']
-        data['ENTITY']    = e['ENTITY']
-        data['DESC']      = e['DESC']
-        data['DATE']      = e['DATE']
-        data['CATEGORY']  = e['CATEGORY']
-        data['CLASS1']    = e['CLASS1']
-        data['TIME']      = e['TIME']
-        data['POB']       = e['POB']
-        data['DOB']       = e['DOB']
-        data['FNAME']     = e['FNAME']
-        data['LNAME']     = e['LNAME']
-        data['GEN']       = e['GEN']
-        data['CLASS1']    = e['CLASS1']
-        data['CLASS2']    = e['CLASS2']
-        data['CLASS3']    = e['CLASS3']    
-        data['XCOORD']    = e['XCOORD']
-        data['YCOORD']    = e['YCOORD']
-        data['ZCOORD']    = e['ZCOORD']  
-        data['ORIGIN']    = e['ORIGIN']
-        data['LOGSOURCE'] = e['LOGSOURCE']
-        data['ORIGINREF'] = e['ORIGINREF']         
-        
-        # All the data about related entities
-        data['eGUID']     = e['eGUID']
-        data['eENTITY']   = e['eENTITY']
-        data['eDESC']     = e['eDESC']
-        data['eDATE']     = e['eDATE']
-        data['eTIME']     = e['eTIME']
-        data['eCATEGORY'] = e['eCATEGORY']  
-        data['eCLASS1']   = e['eCLASS1']
-        data['eCLASS2']   = e['eCLASS2']
-        data['eCLASS3']   = e['eCLASS3']
-        data['ePOB']      = e['ePOB']  
-        data['eDOB']      = e['eDOB']
-        data['eDTG']      = e['eDTG'] 
-        data['eFNAME']    = e['eFNAME']
-        data['eLNAME']    = e['eLNAME']
-        data['eTYPE']     = e['eTYPE']
-        data['eXCOORD']   = e['eXCOORD'] 
-        data['eYCOORD']   = e['eYCOORD'] 
-        data['rcount']    = rcount
-        data['pcount']    = pcount
-        data['ocount']    = ocount
-        data['lcount']    = lcount
-        data['ecount']    = ecount
-        data['reltyp']    = e['reltyp']
-        
-        rcount+=1
-        if e['eENTITY'] == 'Person':
-            pcount+=1
-        elif e['eENTITY'] == 'Object':
-            ocount+=1
-            
-        elif e['eENTITY'] == 'Location':
-            lcount+=1
-                
-        elif e['eENTITY'] == 'Event':
-            ecount+=1
-            
-        results.append(data)
 
-    if UI5 == True:
-        results = json.dumps(results)
-        
-    results[0]['pcount'] = pcount
-    results[0]['ocount'] = ocount
-    results[0]['lcount'] = lcount
-    results[0]['ecount'] = ecount
-    results[0]['rcount'] = rcount
-    
-    TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-    print("[%s_APP-Model-get_entity_profile]: User Data: %s" % (TS, results))       
-    '''
     return results
 
 
