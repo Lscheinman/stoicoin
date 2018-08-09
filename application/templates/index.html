@@ -4901,6 +4901,63 @@
                                                                 </f:SimpleForm>
                                                         </VBox>           
                                         </IconTabFilter>
+                                        <IconTabFilter
+                                                text="Add HANA System"
+                                                icon="sap-icon://key">
+                                                        <VBox class="sapUiSmallMargin">
+                                                                <f:SimpleForm id="USERSYSTEMS"
+                                                                        editable="true"
+                                                                        layout="ResponsiveGridLayout"
+                                                                        labelSpanXL="4"
+                                                                        labelSpanL="4"
+                                                                        labelSpanM="4"
+                                                                        labelSpanS="12"
+                                                                        adjustLabelSpan="false"
+                                                                        emptySpanXL="1"
+                                                                        emptySpanL="1"
+                                                                        emptySpanM="1"
+                                                                        emptySpanS="0"
+                                                                        columnsXL="1"
+                                                                        columnsL="1"
+                                                                        columnsM="1"
+                                                                        singleContainerFullSize="false" 
+                                                                >
+                                                                <f:content>
+                                                                        <Label text="Server Info" />
+                                                                        <Input                                                              
+                                                                                id="ServerInfo"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+
+                                                                        <Label text="SYSTEM name" />
+                                                                        <Input                                                              
+                                                                                id="SYSTEMname"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+                                                                        <Label text="SYSTEM pass" />
+                                                                        <Input                                                              
+                                                                                id="SYSTEMpass"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+                                                                        <Label text="ConDis name" />
+                                                                        <Input                                                              
+                                                                                id="ConDisname"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+                                                                        <Label text="ConDis secret" />
+                                                                        <Input                                                              
+                                                                                id="ConDissecret"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+                                                                        <Button text="Add System" press="onPressUpdateUserSystem" type="Emphasized"/>
+                                                                </f:content>
+                                                                </f:SimpleForm>
+                                                        </VBox>           
+                                        </IconTabFilter>
                                         </items>
                                 </IconTabBar>
                         </Page> 
@@ -8184,13 +8241,37 @@
                                 UPDATE['client_key']  = this.byId("UserClientKey").getValue();
                                 UPDATE['client_secret'] = this.byId("UserClientSecret").getValue();
                                 UPDATE['token']   = this.byId("UserToken").getValue();
-                                UPDATE['token_secret']  = this.byId("UserTokenSecret").getValue()
+                                UPDATE['token_secret']  = this.byId("UserTokenSecret").getValue();
                                 UPDATE['TokenType']  = this.byId("UserTokenType").getSelectedItem().getKey();
                                 
                                 var oModel = new sap.ui.model.json.JSONModel();
                                 var aData = jQuery.ajax({
                                         type : "POST",
                                         url : "/user_tokens",
+                                        dataType : "json",
+                                        async : false,
+                                        data : UPDATE,
+                                        success : function(data,textStatus, jqXHR) {
+                                            oModel.setData({modelData : data}); 
+                                            MessageToast.show("Update Success");
+                                        }
+                                });
+                        },
+                        
+                        onPressUpdateUserSystem : function() {
+                        
+                                var UPDATE = {}
+                               
+                                UPDATE['client_key']  = this.byId("ServerInfo").getValue();
+                                UPDATE['client_secret'] = this.byId("SYSTEMname").getValue();
+                                UPDATE['token']   = this.byId("SYSTEMpass").getValue();
+                                UPDATE['token_secret']  = this.byId("ConDisname").getValue();
+                                UPDATE['TokenType']  = this.byId("ConDissecret")..getValue();
+                                
+                                var oModel = new sap.ui.model.json.JSONModel();
+                                var aData = jQuery.ajax({
+                                        type : "POST",
+                                        url : "/user_systems",
                                         dataType : "json",
                                         async : false,
                                         data : UPDATE,
