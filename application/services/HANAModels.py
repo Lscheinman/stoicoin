@@ -12,30 +12,29 @@ from threading import Thread
 
 debugging = False
 
-
 class HANAModel():
     
     def __init__(self):
         
-        if debugging == False:
+        if '\\' in os.getcwd():
             try:
-                auth = '%s/application/services/config/AUTH_HANA.json' % (os.getcwd())
-                self.BaseBook = '%s/application/services/data/BaseBook.xlsx' % (os.getcwd())
-                self.SocialPath = '%s/application/services/data/Social.csv' % (os.getcwd())
+                auth = '%s\\application\\services\\config\\AUTH_HANA_GIP.json' % (os.getcwd())
+                self.BaseBook = '%s\\application\\services\\data\\BaseBook.xlsx' % (os.getcwd())
+                self.SocialPath = '%s\\application\\services\\data\\Social.csv' % (os.getcwd())
                 keys = json.loads(open(auth).read())
             except:
-                auth = '%s\\config\\AUTH_HANA.json' % (os.getcwd())
+                auth = '%s\\config\\AUTH_HANA_GIP.json' % (os.getcwd())
                 self.BaseBook = '%s\\data\\BaseBook.xlsx' % (os.getcwd())
                 self.SocialPath = '%s\\data\\Social.csv' % (os.getcwd())
                 keys = json.loads(open(auth).read())
         else:
             try:
-                auth = '%s/services/config/AUTH_HANA.json' % (os.getcwd())
+                auth = '%s/services/config/AUTH_HANA_GIP.json' % (os.getcwd())
                 self.BaseBook   = '%s/services/data/BaseBook.xlsx' % (os.getcwd()) # debugging line
                 self.SocialPath = '%s/services/data/Social.csv' % (os.getcwd())
                 keys = json.loads(open(auth).read())
             except:
-                auth = '%s/config/AUTH_HANA.json' % (os.getcwd())
+                auth = '%s/config/AUTH_HANA_GIP.json' % (os.getcwd())
                 self.BaseBook   = '%s/data/BaseBook.xlsx' % (os.getcwd()) # debugging line 
                 self.SocialPath   = '%s/data/Social.csv' % (os.getcwd()) # debugging line 
                 keys = json.loads(open(auth).read())
@@ -63,7 +62,7 @@ class HANAModel():
         self.ResObject   = []
         self.ResPerson   = []
         self.ResRelation = []
-        self.Verbose = False
+        self.Verbose = True
         self.GoogleMapsAPI = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyBIXb-g4Z-AP8qI1v_bgRq4rc4GGBtKqmM&callback=initMap'
     
     def initialize(self):
@@ -113,6 +112,7 @@ class HANAModel():
         password = 'test123'
         self.insertUser('Hakim', bcrypt.encrypt(password), 'Hakim@email.com', '555-5555', 'A1A2A3B1B2', 'None', 'Health')           
         password = 'test123'
+        self.insertUser('حكيم', bcrypt.encrypt(password), 'HakimArabic@email.com', '555-5555', 'A1A2A3B1B2', 'None', 'Arabic')
         self.insertUser('Hans', bcrypt.encrypt(password), 'Hans@email.com', '555-5555', 'A1A2A3B1C1', 'None', 'Analyst')           
         password = 'cantloginbecauserolewontseeanything'        
         self.insertUser('Open Task', bcrypt.encrypt(password), 'OpenTasks@email.com', '555-5555', 'Open Task', 'None', 'Open to any role')        
@@ -242,117 +242,138 @@ class HANAModel():
         sql = '''
         CREATE COLUMN TABLE "POLER"."MASTER_TA"(
 	ENTITY_GUID 		NVARCHAR(27) PRIMARY KEY, 
-	RAW_TEXT 		NVARCHAR(5000)
+	RAW_TEXT 		NCLOB
         );
         '''
         self.cursor.execute(sql)
-
+        
         sql = '''
-        CREATE FULLTEXT INDEX "TA_RT" ON "POLER"."MASTER_TA"("RAW_TEXT")
+        CREATE FULLTEXT INDEX RTT on POLER.MASTER_TA (RAW_TEXT)
+        LANGUAGE DETECTION ('en','ar')
+        FAST PREPROCESS OFF
+        ASYNC
+        configuration 'EXTRACTION_CORE'
         TEXT ANALYSIS ON
-        CONFIGURATION 'EXTRACTION_CORE_PUBLIC_SECTOR';
+        TEXT MINING ON;
         '''
         self.cursor.execute(sql)
+        '''
+        insert into POLER.MASTER_TA2 select * from POLER.MASTER_TA;
+        alter table POLER.MASTER_TA2 add (DETECTED_LANG NVARCHAR(2) null);
+         
+        update MASTER_TA2
+          set DETECTED_LANG=TA_LANGUAGE
+          from MASTER_TA2, "$TA_RTT" t2 where MASTER_TA2.ENTITY_GUID=t2.ENTITY_GUID;
+
+        '''
+        
+        #sql = '''
+        #    CREATE FULLTEXT INDEX "TA_RT_CORE" ON "POLER"."MASTER_TA"("RAW_TEXT")
+        #    TEXT ANALYSIS ON
+        #    CONFIGURATION 'EXTRACTION_CORE_VOICEOFCUSTOMER';
+        #    '''
+        #self.cursor.execute(sql)        
+        
     
     def initialize_CONDIS_Customization(self):
         if self.curCondis == None:
             self.ConnectToHANA() 
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'AC1', 'AccountCreated');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'AN1', 'AnalysisToSupport');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'BO1', 'BornOn');'''
-        self.curCondis(sql)        
+        self.curCondis.execute(sql)        
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'BO2', 'BornIn');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'CH1', 'ChargedWith');'''
-        self.curCondis(sql)       
+        self.curCondis.execute(sql)       
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'CO1', 'CollectionToSupport');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'CO2', 'CommittedCrime');'''
-        self.curCondis(sql)         
+        self.curCondis.execute(sql)         
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'CR1', 'CreatedAt');'''
-        self.curCondis(sql)        
+        self.curCondis.execute(sql)        
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'CR2', 'CreatedBy');'''
-        self.curCondis(sql)        
+        self.curCondis.execute(sql)        
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'CR3', 'CreatedOn');'''
-        self.curCondis(sql)        
+        self.curCondis.execute(sql)        
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'DO1', 'DocumentIn');'''
-        self.curCondis(sql)        
+        self.curCondis.execute(sql)        
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'DO2', 'DocumentMentioning');'''
-        self.curCondis(sql)        
+        self.curCondis.execute(sql)        
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'DO3', 'DocumentedBy');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'FM1', 'Family');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'FO1', 'Follows');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'FO2', 'FOUND');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'FR1', 'FromFile');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'HA1', 'HasAttribute');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'HA2', 'HasStatus');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'IN1', 'IncludesTag');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'IN2', 'Involves');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'KN1', 'Knows');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'LI1', 'LivesAt');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'LO1', 'LocatedAt');'''
-        self.curCondis(sql)        
+        self.curCondis.execute(sql)        
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'MO1', 'ModifiedBy');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'MO2', 'ModifiedOn');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'ON1', 'On');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'OC1', 'OccurredAt');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'OF1', 'OfType');'''
-        self.curCondis(sql)        
+        self.curCondis.execute(sql)        
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'OW1', 'Owns');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'PA1', 'PartOf');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'PR1', 'ProcessedIntel');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'PU1', 'Published');'''
-        self.curCondis(sql)        
+        self.curCondis.execute(sql)        
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'PU2', 'PublishedIntel');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'PU3', 'PublishedTask');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'RE1', 'ReportedAt');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'RE2', 'RegisteredOn');'''
-        self.curCondis(sql)  
+        self.curCondis.execute(sql)  
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'RE3', 'ReferenceLink');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'RE4', 'RecordedBy');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'SE1', 'Searched');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'SU1', 'SubjectofContact');'''
-        self.curCondis(sql)     
+        self.curCondis.execute(sql)     
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'SU2', 'Supporting');'''
-        self.curCondis(sql)             
+        self.curCondis.execute(sql)             
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'TA1', 'Tagged');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'TA2', 'TaskedTo');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'TA3', 'TAReference');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'TA4', 'TextAnalytics');'''
-        self.curCondis(sql)    
+        self.curCondis.execute(sql)    
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'TW1', 'Tweeted');'''
-        self.curCondis(sql)
+        self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'TW2', 'TweetLocation');'''
-        self.curCondis(sql)                 
+        self.curCondis.execute(sql)                 
     
     def initialize_reset(self):
         
@@ -392,11 +413,8 @@ class HANAModel():
         except:
             self.initialize_POLER()
         
-        t1 = Thread(target=self.initialize, )
-        t1.start()
-
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-        print("[%s_HDB-initialize_reset]: initialization continues with preloading." % (TS))          
+        print("[%s_HDB-initialize_reset]: All clear." % (TS))          
                
     def goLive(self):
         
@@ -1185,7 +1203,7 @@ class HANAModel():
             {'P_FNAME' : 'Eric', 'P_LNAME' : 'Spoon'},
             {'P_FNAME' : 'Ethel', 'P_LNAME' : 'Spoon'},
             {'P_FNAME' : 'Sid', 'P_LNAME' : 'Spoon'},
-            {'P_FNAME' : 'Hakim', 'P_LNAME' : 'Abdul'} 
+            {'P_FNAME' : 'Hakim', 'P_LNAME' : 'Abdul'}
         ])
         
         for p in People:
@@ -1566,6 +1584,9 @@ class HANAModel():
           
     def insertEvent(self, E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE):
         
+        if self.cursor == None:
+            self.ConnectToHANA()        
+        
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         if self.Verbose == True:
             print("[%s_HDB-insertEvent]: process started." % (TS))      
@@ -1575,7 +1596,6 @@ class HANAModel():
         
         if len(E_LOGSOURCE) > 199:
             E_LOGSOURCE = E_LOGSOURCE[:200]
-        E_ORIGINREF = str(E_ORIGINREF)
         E_DATE = self.check_date(E_DATE)
         if ':' not in str(E_TIME):
             E_TIME = '12:00'
@@ -1592,8 +1612,8 @@ class HANAModel():
             E_ORIGIN = '%s' % E_ORIGIN.replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '')
         if E_CLASS1 != None and isinstance(E_CLASS1, str) == True:
             E_CLASS1 = (E_CLASS1.replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', ''))[:200]
-        if len(str(E_ORIGINREF)) < 5:
-            E_ORIGINREF = ('%s%s%s%s%s%s' % (E_TYPE, E_CATEGORY, E_DESC, E_DTG, E_CLASS1, E_ORIGIN)).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')
+
+        E_ORIGINREF = ('%s%s%s%s%s%s' % (E_TYPE, E_CATEGORY, E_DESC, E_DTG, E_CLASS1, E_ORIGIN)).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')
         E_ORIGINREF = (E_ORIGINREF[:2000]).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')
         E_ORIGIN = E_ORIGIN[:200]
 
@@ -1616,13 +1636,14 @@ class HANAModel():
             self.CondisIncident(E_GUID, E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE)
   
         return E_GUID
-        
-         
+     
     def insertLocation(self, L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1, L_ORIGIN, L_ORIGINREF, L_LOGSOURCE):
+        
+        if self.cursor == None:
+            self.ConnectToHANA()        
         
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         L_LOGSOURCE = str(L_LOGSOURCE)
-        L_ORIGINREF = str(L_ORIGINREF)
         L_DESC = str(L_DESC).replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '')
         if self.cursor == None:
             self.ConnectToHANA()     
@@ -1638,9 +1659,8 @@ class HANAModel():
             L_YCOORD = 0.000 
         if len(L_LOGSOURCE) > 199:
             L_LOGSOURCE = L_LOGSOURCE[:200] 
-        
-        if len(str(L_ORIGINREF)) < 5:    
-            L_ORIGINREF = ('%s%s%s%s%s%s' % (L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1))
+           
+        L_ORIGINREF = ('%s%s%s%s%s%s' % (L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1))
         L_ORIGINREF = (L_ORIGINREF[:2000]).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')            
         L_CLASS1 = 0
         
@@ -1666,12 +1686,14 @@ class HANAModel():
             Cooresponding Class1 N/A, N/A, Tweeter1, 555-5555, Glock9
             Cooresponding Class2 N/A, N/A, ID-394949, SN-393910, SN-444
         '''
+        if self.cursor == None:
+            self.ConnectToHANA()        
+        
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         print("[%s_HDB-insertObject]: process started." % (TS))
         O_CLASS1 = (str(O_CLASS1).replace("'", ""))[:200]
         O_CLASS2 = (str(O_CLASS2).replace("'", ""))[:200]
         O_CLASS3 = (str(O_CLASS3).replace("'", ""))[:200]
-        O_ORIGINREF = str(O_ORIGINREF)
         
         if self.cursor == None:
             self.ConnectToHANA()  
@@ -1682,9 +1704,8 @@ class HANAModel():
         if O_CATEGORY != None:
             O_CATEGORY = (O_CATEGORY[:60]).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')   
         else:
-            O_CATEGORY = 'Unknown'
-        if len(str(O_ORIGINREF)) < 5:    
-            O_ORIGINREF = ('%s%s%s%s%s%s' % (O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3)).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')
+            O_CATEGORY = 'Unknown'   
+        O_ORIGINREF = ('%s%s%s%s%s%s' % (O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3)).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')
         O_ORIGINREF = (O_ORIGINREF[:2000]).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')   
         
         if O_DESC != None:
@@ -1702,6 +1723,88 @@ class HANAModel():
             self.CondisObject(O_GUID, O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3, O_ORIGIN, O_ORIGINREF, O_LOGSOURCE)  
         
         return O_GUID
+    
+    def insertODBPerson(self, P_GUID, P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE, DESC):
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        if self.cursor == None:
+            self.ConnectToHANA()
+            
+        statement = '''INSERT INTO "POLER"."PERSON" VALUES('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', 'PERSON') ''' % (P_GUID, P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE)
+        statementB = '''INSERT INTO "POLER"."MASTER_NODE" VALUES('%s', 'PERSON', '%s', '%s', '%s', '%s', '%s', '%s', '%s') ''' % (P_GUID, P_GEN, P_POB, P_DOB, P_ORIGINREF, P_FNAME, P_LNAME, P_ORIGIN)
+        try:
+            self.cursor.execute(statement) 
+        except Exception as e:
+            print("[%s_HDB-insertODBPerson]: ERROR: %s\n%s." % (TS, e, statement))   
+        try:
+            self.cursor.execute(statementB) 
+        except Exception as e:
+            print("[%s_HDB-insertODBPerson]: ERROR: %s\n%s." % (TS, e, statementB))   
+        self.CondisPerson(P_GUID, P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE)           
+    
+    def insertODBObject(self, O_GUID, O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3, O_ORIGIN, O_ORIGINREF, O_LOGSOURCE):
+        
+        if self.cursor == None:
+            self.ConnectToHANA()        
+        
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+
+        statement = '''INSERT INTO "POLER"."OBJECT" VALUES('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', 'OBJECT') ''' % (O_GUID, O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3, O_ORIGIN, O_ORIGINREF, O_LOGSOURCE)
+        statementB = '''INSERT INTO "POLER"."MASTER_NODE" VALUES('%s', 'OBJECT', '%s', '%s', '%s', '%s', '%s', '%s', '%s') ''' % (O_GUID, O_TYPE, O_CATEGORY[:40], TS, str(O_DESC)[:2000], O_CLASS1, O_CLASS2, O_CLASS3)
+        
+        try:
+            self.cursor.execute(statement)
+        except Exception as e:
+            print("[%s_HDB-insertODBObject]: ERROR: %s\n%s." % (TS, e, statement))           
+        try:
+            self.cursor.execute(statementB) 
+        except Exception as e:
+            print("[%s_HDB-insertODBObject]: ERROR: %s\n%s." % (TS, e, statementB))           
+        self.CondisObject(O_GUID, O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3, O_ORIGIN, O_ORIGINREF, O_LOGSOURCE)  
+         
+    
+    def insertODBEvent(self, E_GUID, E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE):
+        
+        if self.cursor == None:
+            self.ConnectToHANA()
+        
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        E_DESC = bytes(E_DESC, 'utf-8').decode('utf-8', 'ignore')
+        E_DESC = '%s' % E_DESC.replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '')
+        E_DESC = E_DESC[:5000] 
+        TA_ID = int(str('9' + str(time.time()).replace(".", ""))) 
+        sql = '''INSERT INTO "POLER"."MASTER_TA" VALUES('%s', '%s') ''' % (TA_ID, E_DESC) 
+        self.cursor.execute(sql)
+
+        statement = '''INSERT INTO "POLER"."EVENT" VALUES('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %s, %s, '%s', '%s', '%s', 'EVENT') ''' % (E_GUID, E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE)
+        statementB = '''INSERT INTO "POLER"."MASTER_NODE" VALUES('%s', 'EVENT', '%s', '%s', '%s', '%s', '%s', '%s', '%s') ''' % (E_GUID, E_TYPE, E_CATEGORY, E_DATE, str(E_DESC)[:2000], E_CLASS1, E_XCOORD, E_YCOORD)
+        
+        try:
+            self.cursor.execute(statement) 
+        except Exception as e:
+            print("[%s_HDB-insertODBEvent]: ERROR: %s\n%s." % (TS, e, statement))  
+            
+        try:
+            self.cursor.execute(statementB) 
+        except Exception as e:
+            print("[%s_HDB-insertODBEvent]: ERROR: %s\n%s." % (TS, e, statementB))              
+            
+            
+        if isinstance(E_CLASS1, int) == False or isinstance(E_CLASS1, float) == False:
+            E_CLASS1 = 0            
+        self.CondisIncident(E_GUID, E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE)
+  
+    def insertODBLocation(self, L_GUID, L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1, L_ORIGIN, L_ORIGINREF, L_LOGSOURCE):
+        
+        if self.cursor == None:
+            self.ConnectToHANA()        
+        
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        statement = '''INSERT INTO "POLER"."LOCATION" VALUES('%s', '%s', '%s', %s, %s, '%s', '%s', '%s', '%s', '%s', 'LOCATION') ''' % (L_GUID, L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1, L_ORIGIN, L_ORIGINREF, L_LOGSOURCE)
+        statementB = '''INSERT INTO "POLER"."MASTER_NODE" VALUES('%s', 'LOCATION', '%s', '%s', '%s', '%s', '%s', '%s', '%s') ''' % (L_GUID, L_TYPE, L_TYPE, TS, str(L_DESC)[:2000], L_XCOORD, L_YCOORD, L_ZCOORD)
+        
+        self.cursor.execute(statement) 
+        self.cursor.execute(statementB)        
+        self.CondisLocation(L_GUID, L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1, L_ORIGIN, L_ORIGINREF, L_LOGSOURCE)    
         
     def LoadSimData(self):
         
@@ -1871,7 +1974,19 @@ class HANAModel():
             TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print("[%s_HDB-insertUser]: Created Associated HANA GUID: Person %s." % (TS, O_GUID))       
                 
-        return O_GUID           
+        return O_GUID    
+    
+    def insertODBUser(self, O_GUID, PGUID, username, password, email, tel, location, image, utype):
+       
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        User = 'User'
+        O_ORIGINREF = None
+        O_DESC = 'Username %s of type %s created on %s can be reached at %s' % (username, utype, TS, email)  
+        self.insertODBObject(O_GUID, User, utype, O_DESC, username, password, tel, location, O_ORIGINREF, email) 
+        self.insertODBPerson(PGUID, 'U', User, username, TS, location, O_GUID, O_ORIGINREF, 'A1', O_DESC)
+        self.insertRelation(PGUID, 'Person', 'AccountCreation', O_GUID, 'Object')
+                
+        return O_GUID            
        
     def merge_ORGREF_BlockChain(self, TYPE, GUID1, GUID2, aORIGINREF, bORIGINREF, aTable, bTable, aguid, bguid):
         
@@ -2004,7 +2119,7 @@ class HANAModel():
         
         return '%s merged into %s with %d new relationships.' % (GUID2, GUID1, relcount)
   
-    def TextAnalytics(self, TA_CONFIG, text, TA_RUN):
+    def TextAnalytics(self, TA_CONFIG, text, TA_RUN, ODB):
         '''
         TA_CONFIG : VOC
         0 : ID, 1 : TA_RULE, 2 : TA_COUNTER, 3 : TA_TOKEN, 4 : TA_LANGUAGE, 5 : TA_TYPE, 
@@ -2028,22 +2143,10 @@ class HANAModel():
         POB = 'Unknown'
         DESC = 'Person extracted from TA'
         NA = 'NA'
-    
-        # set up iterators to determine where TA results should have relations
-        curSent = 1
-        curPara = 1
-        curCount = 1
-        prePerson = 0
-        preTopic = 0
-        preLocation = 0
-        curPerson = 1000
-        curTopic = 2000
-        curLocation = 3000
-        newSent = False
-        newPara = False        
+         
         if self.cursor == None:
             self.ConnectToHANA() 
-            
+  
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         print("[%s_HDB-TextAnalytics]: process started." % (TS)) 
         TA_ID = int(str('9' + str(time.time()).replace(".", ""))) 
@@ -2059,7 +2162,7 @@ class HANAModel():
             
         print("[%s_HDB-TextAnalytics]: pausing for text processing." % (TS)) 
         time.sleep(3)
-        statement = '''SELECT * FROM "POLER"."$TA_TA_RT" WHERE "ENTITY_GUID" = '%d' ''' % (TA_ID)
+        statement = '''SELECT * FROM "POLER"."$TA_RTT" WHERE "ENTITY_GUID" = '%d' ''' % (TA_ID)
         TA_TABLE = self.cursor.execute(statement).fetchall()
         if len(TA_TABLE) < 1:
             TA_TABLE = self.cursor.execute(statement).fetchall()
@@ -2078,94 +2181,226 @@ class HANAModel():
             Node['GUID']         = 0
             View.append(Node)
             print("[%s_HDB-TextAnalytics]: Node" % (Node))
+            
+        # set up iterators to determine where TA results should have relations
+        curSent = 1
+        curPara = 1
+        curCount = 1
+        prePerson = preTopic = preLocation = curPerson = curTopic = curLocation = 0
+        newSent = newPara =  False 
                     
         print("[%s_HDB-TextAnalytics]: TA complete with %d rows." % (TS, len(View))) 
         for Node in View:
             ORIGINREF = '%s%s%s' % (Node['TA_TYPE'], Node['TA_TOKEN'], "TA_COIN")
             if Node['TA_SENTENCE'] != curSent:
                 curSent+=1
-                prePerson = 0
-                preTopic = 0
+                prePerson = preTopic = preLocation = curPerson = curTopic = curLocation = 0
                 newSent = True
             else:
                 newSent = False
                 
             if Node['TA_PARAGRAPH'] != curPara:
                 curPara+=1
-                prePerson = 0
-                preTopic = 0
+                prePerson = preTopic = preLocation = curPerson = curTopic = curLocation = 0
                 newPara = True
             else:
                 newPara = False 
             if (Node['TA_TYPE'] == 'Topic' or 
                 Node['TA_TYPE'] == 'NOUN_GROUP' or 
                 Node['TA_TYPE'] == 'Occupation' or 
-                Node['TA_TYPE'] == 'Artifact' or 
-                Node['TA_TYPE'] == 'ORGANIZATION/COMMERCIAL'):
+                Node['TA_TYPE'] == 'Artifact'):
+
+                if ODB != None:
+                    curTopic = Node['GUID'] = ODB.insertObject(Node['TA_TYPE'], CATEGORY, '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, None, LOGSOURCE)
+                else:    
+                    curTopic = Node['GUID'] = self.insertObject(Node['TA_TYPE'], CATEGORY, '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
                 
-                Node['GUID'] = self.insertObject(Node['TA_TYPE'], CATEGORY, '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+                
                 if preTopic == 0:
                     preTopic = Node['TA_COUNTER']
-                elif Node['TA_COUNTER'] - preTopic < 5 and newSent == False:
-                    self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
-                if prePerson != 0:
-                    if Node['TA_COUNTER'] - prePerson < 5 and newSent == False:
+                    curTopic = Node['GUID']
+                elif Node['TA_COUNTER'] - preTopic < 5 and newSent == False and curTopic != Node['GUID']:     
+                    if ODB != None:
+                        ODB.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                    else:
                         self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                
+                if prePerson != 0:
+                    if Node['TA_COUNTER'] - prePerson < 5 and newSent == False and curTopic != 0:
+                        if ODB != None:
+                            ODB.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                        else:
+                            self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
                 preTopic = Node['TA_COUNTER']
                 TA_RUN['Object'].append({'GUID' : str(Node['GUID']), 'DESC' : Node['TA_TOKEN'], 'CATEGORY' : Node['TA_TYPE'], 'TYPE' : 'Object', 'NAME' : '%s %s' % (Node['TA_TYPE'], Node['TA_TOKEN'])})
-                self.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Object')
                 
-            if Node['TA_TYPE'] == 'PERSON':
-                Node['GUID'] = self.insertPerson(GEN, Node['TA_TOKEN'], LNAME, DOB, POB, ORIGIN, ORIGINREF, LOGSOURCE, DESC)
+                if ODB != None:
+                    ODB.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Object')
+                else:
+                    self.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Object')
+                
+            elif Node['TA_TYPE'] == 'PERSON':
+                if ODB != None:
+                    Node['GUID'] = ODB.insertPerson(GEN, Node['TA_TOKEN'], LNAME, DOB, POB, ORIGIN, ORIGINREF, LOGSOURCE, DESC)
+                else:
+                    Node['GUID'] = self.insertPerson(GEN, Node['TA_TOKEN'], LNAME, DOB, POB, ORIGIN, ORIGINREF, LOGSOURCE, DESC)
                 if prePerson == 0:
                     prePerson = Node['TA_COUNTER']
-                elif Node['TA_COUNTER'] - prePerson < 5 and newSent == False:
-                    self.insertRelation(Node['GUID'], 'Person', 'TA_REFERENCE_SAME_SENTENCE', curPerson, 'Object')
+                    curPerson = Node['GUID']
+                elif Node['TA_COUNTER'] - prePerson < 5 and newSent == False and curPerson != 0:
+                    if ODB != None:
+                        ODB.insertRelation(Node['GUID'], 'Person', 'TA_REFERENCE_SAME_SENTENCE', curPerson, 'Person')
+                    else:
+                        self.insertRelation(Node['GUID'], 'Person', 'TA_REFERENCE_SAME_SENTENCE', curPerson, 'Person')
                 if preTopic != 0:
-                    if Node['TA_COUNTER'] - preTopic < 5 and newSent == False:
-                        self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Person')                
+                    if Node['TA_COUNTER'] - preTopic < 5 and newSent == False and curTopic != 0:
+                        if ODB != None:
+                            ODB.insertRelation(Node['GUID'], 'Person', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')  
+                        else:
+                            self.insertRelation(Node['GUID'], 'Person', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')  
+                            
                 prePerson = Node['TA_COUNTER']
                 TA_RUN['Person'].append({'GUID' : str(Node['GUID']), 'DESC' : Node['TA_TOKEN'], 'CATEGORY' : Node['TA_TYPE'], 'TYPE' : 'Person', 'NAME' : Node['TA_TOKEN']}) 
-                self.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Person')
+                if ODB != None:
+                    ODB.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Person')
+                else:
+                    self.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Person')
                 
-            if Node['TA_TYPE'] == 'LOCALITY' or Node['TA_TYPE'] == 'COUNTRY' or Node['TA_TYPE'] == 'CONTINENT' or Node['TA_TYPE'] == 'GEO_AREA':
-                Node['GUID'] = self.insertLocation(Node['TA_TYPE'], Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, CLASS1, ORIGIN, ORIGINREF, LOGSOURCE)
+            elif Node['TA_TYPE'] == 'LOCALITY' or Node['TA_TYPE'] == 'COUNTRY' or Node['TA_TYPE'] == 'CONTINENT' or Node['TA_TYPE'] == 'GEO_AREA':
+                if ODB != None:
+                    Node['GUID'] = ODB.insertLocation(Node['TA_TYPE'], Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, CLASS1, ORIGIN, ORIGINREF, LOGSOURCE)
+                else:
+                    Node['GUID'] = self.insertLocation(Node['TA_TYPE'], Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, CLASS1, ORIGIN, ORIGINREF, LOGSOURCE)
                 if preLocation == 0:
                     preLocation = Node['TA_COUNTER']
-                elif Node['TA_COUNTER'] - preLocation < 5 and newSent == False:
-                    self.insertRelation(Node['GUID'], 'Location', 'TA_REFERENCE_SAME_SENTENCE', curPerson, 'Object')
+                elif Node['TA_COUNTER'] - preLocation < 5 and newSent == False and curPerson != 0:
+                    if ODB != None:
+                        ODB.insertRelation(Node['GUID'], 'Location', 'TA_REFERENCE_SAME_SENTENCE', curPerson, 'Person')
+                    else:
+                        self.insertRelation(Node['GUID'], 'Location', 'TA_REFERENCE_SAME_SENTENCE', curPerson, 'Person')
                 if preTopic != 0:
-                    if Node['TA_COUNTER'] - preTopic < 5 and newSent == False:
-                        self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Person')                
+                    if Node['TA_COUNTER'] - preTopic < 5 and newSent == False and curTopic != 0:
+                        if ODB != None:
+                            ODB.insertRelation(Node['GUID'], 'Location', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')      
+                        else:
+                            self.insertRelation(Node['GUID'], 'Location', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')    
                 preLocation = Node['TA_COUNTER']  
                 TA_RUN['Location'].append({'GUID' : str(Node['GUID']), 'DESC' : Node['TA_TOKEN'], 'CATEGORY' : Node['TA_TYPE'], 'TYPE' : 'Location', 'NAME' : '%s %s' % (Node['TA_TYPE'], Node['TA_TOKEN'])})
-                self.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Location')
+                if ODB != None:
+                    ODB.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Location')
+                else:
+                    self.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Location')
                 
-            if 'COMMON_WEAPON/' in Node['TA_TYPE']:
-                Node['GUID'] = self.insertObject('Weapon', '%s' % Node['TA_TYPE'], '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+            elif 'COMMON_WEAPON/' in Node['TA_TYPE']:
+                if ODB != None:
+                    Node['GUID'] = ODB.insertObject('Weapon', '%s' % Node['TA_TYPE'], '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+                else:
+                    Node['GUID'] = self.insertObject('Weapon', '%s' % Node['TA_TYPE'], '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
                 if preTopic == 0:
                     preTopic = Node['TA_COUNTER']
-                elif Node['TA_COUNTER'] - preTopic < 5 and newSent == False:
-                    self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
-                if prePerson != 0:
-                    if Node['TA_COUNTER'] - prePerson < 5 and newSent == False:
+                elif Node['TA_COUNTER'] - preTopic < 5 and newSent == False and curTopic != 0:
+                    if ODB != None:
+                        ODB.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                    else:
                         self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                if prePerson != 0:
+                    if Node['TA_COUNTER'] - prePerson < 5 and newSent == False and curTopic != 0:
+                        if ODB != None:
+                            ODB.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                        else:
+                            self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
                 preTopic = Node['TA_COUNTER'] 
                 TA_RUN['Object'].append({'GUID' : str(Node['GUID']), 'DESC' : Node['TA_TOKEN'], 'CATEGORY' : Node['TA_TYPE'], 'TYPE' : 'Object', 'NAME' : '%s %s' % (Node['TA_TYPE'], Node['TA_TOKEN'])})
-                self.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Object')
-                
-            if 'COMMON_VEHICLE/' in Node['TA_TYPE']:
-                Node['GUID'] = self.insertObject('Vehicle', '%s' % Node['TA_TYPE'], '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+                if ODB != None:
+                    ODB.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Object')
+                else:
+                    self.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Object')
+            
+            elif 'VEHICLE/' in Node['TA_TYPE']:
+                if ODB != None:
+                    Node['GUID'] = ODB.insertObject('Vehicle', '%s' % Node['TA_TYPE'], '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+                else:
+                    Node['GUID'] = self.insertObject('Vehicle', '%s' % Node['TA_TYPE'], '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
                 if preTopic == 0:
                     preTopic = Node['TA_COUNTER']
-                elif Node['TA_COUNTER'] - preTopic < 5 and newSent == False:
-                    self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
-                if prePerson != 0:
-                    if Node['TA_COUNTER'] - prePerson < 5 and newSent == False:
+                elif Node['TA_COUNTER'] - preTopic < 5 and newSent == False and curTopic != 0:
+                    if ODB != None:
+                        ODB.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                    else:
                         self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                if prePerson != 0:
+                    if Node['TA_COUNTER'] - prePerson < 5 and newSent == False and curTopic != 0:
+                        if ODB != None:
+                            ODB.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                        else:
+                            self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                
+            elif 'ORGANIZATION/COMMERCIAL' in Node['TA_TYPE']:
+                if ODB != None:
+                    Node['GUID'] = ODB.insertObject('Commercial Organization', '%s' % Node['TA_TYPE'], '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+                else:
+                    Node['GUID'] = self.insertObject('Commercial Organization', '%s' % Node['TA_TYPE'], '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+                if preTopic == 0:
+                    preTopic = Node['TA_COUNTER']
+                elif Node['TA_COUNTER'] - preTopic < 5 and newSent == False and curTopic != 0:
+                    if ODB != None:
+                        ODB.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                    else:
+                        self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                if prePerson != 0:
+                    if Node['TA_COUNTER'] - prePerson < 5 and newSent == False and curTopic != 0:
+                        if ODB != None:
+                            ODB.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                        else:
+                            self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                
+            elif 'ORGANIZATION/MEDIA' in Node['TA_TYPE']:
+                if ODB != None:
+                    Node['GUID'] = ODB.insertObject('Media Organization', '%s' % Node['TA_TYPE'], '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+                else:
+                    Node['GUID'] = self.insertObject('Media Organization', '%s' % Node['TA_TYPE'], '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+                if preTopic == 0:
+                    preTopic = Node['TA_COUNTER']
+                elif Node['TA_COUNTER'] - preTopic < 5 and newSent == False and curTopic != 0:
+                    if ODB != None:
+                        ODB.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                    else:
+                        self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                if prePerson != 0:
+                    if Node['TA_COUNTER'] - prePerson < 5 and newSent == False and curTopic != 0:
+                        if ODB != None:
+                            ODB.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                        else:
+                            self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+
+            
+            elif 'FACILITY/BUILDINGGROUNDS' in Node['TA_TYPE']:
+                if ODB != None:
+                    Node['GUID'] = ODB.insertObject('Facility', '%s' % Node['TA_TYPE'], '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+                else:
+                    Node['GUID'] = self.insertObject('Facility', '%s' % Node['TA_TYPE'], '%s' % Node['TA_TOKEN'], CLASS1, CLASS2, CLASS3, ORIGIN, ORIGINREF, LOGSOURCE)
+                if preTopic == 0:
+                    preTopic = Node['TA_COUNTER']
+                elif Node['TA_COUNTER'] - preTopic < 5 and newSent == False and curTopic != 0:
+                    if ODB != None:
+                        ODB.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                    else:
+                        self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                if prePerson != 0:
+                    if Node['TA_COUNTER'] - prePerson < 5 and newSent == False and curTopic != 0:
+                        if ODB != None:
+                            ODB.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                        else:
+                            self.insertRelation(Node['GUID'], 'Object', 'TA_REFERENCE_SAME_SENTENCE', curTopic, 'Object')
+                
+                
+                
                 preTopic = Node['TA_COUNTER'] 
                 TA_RUN['Object'].append({'GUID' : str(Node['GUID']), 'DESC' : Node['TA_TOKEN'], 'CATEGORY' : Node['TA_TYPE'], 'TYPE' : 'Object', 'NAME' : '%s %s' % (Node['TA_TYPE'], Node['TA_TOKEN'])})            
-                self.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Object')
+                if ODB != None:
+                    ODB.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Object')
+                else:
+                    self.insertRelation(TA_RUN['GUID'], 'Event', 'TEXT_ANALYTICS', Node['GUID'], 'Object')
             
             if 'Action_' in Node['TA_TYPE']:
                 TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
@@ -2174,8 +2409,11 @@ class HANAModel():
                 E_DATE = '1900-01-01'
                 E_CLASS1 = 'NA'
                 E_ORIGINREF = 'TAREF%s%s' % (Node['TA_TYPE'], Node['TA_TOKEN'])
-                Node['GUID'] = self.insertEvent('Event', 'From_TA', Node['TA_TOKEN'], Node['TA_LANGUAGE'], E_CLASS1, E_TIME, E_DATE, DTG, 0.0, 0.0, ORIGIN, E_ORIGINREF, LOGSOURCE)
-            
+                if ODB != None:
+                    Node['GUID'] = ODB.insertEvent('Event', 'From_TA', Node['TA_TOKEN'], Node['TA_LANGUAGE'], E_CLASS1, E_TIME, E_DATE, DTG, 0.0, 0.0, ORIGIN, E_ORIGINREF, LOGSOURCE)
+                else:
+                    Node['GUID'] = self.insertEvent('Event', 'From_TA', Node['TA_TOKEN'], Node['TA_LANGUAGE'], E_CLASS1, E_TIME, E_DATE, DTG, 0.0, 0.0, ORIGIN, E_ORIGINREF, LOGSOURCE)
+                
             TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print("[%s_HDB-TextAnalytics]: Row %d complete." % (TS, curCount))               
             curCount+=1
@@ -2284,6 +2522,8 @@ class HANAModel():
             rmap = 'TA3'   
         elif TYPE == 'TEXT_ANALYTICS':
             rmap = 'TA4'
+        elif TYPE == 'TA_REFERENCE_SAME_SENTENCE':
+            rmap = 'TA5'
         elif TYPE == 'TweetLocation':
             rmap = 'TW1'     
         elif TYPE == 'Tweeted':
@@ -2381,7 +2621,10 @@ class HANAModel():
         if self.Verbose == True:
             print('[*] Insert ConDis person:\n%s' % statement)
         self.CondisNode(P_GUID, P_GUID, e['ENTITY_TYPE'], P_FNAME, e['ENTITY_LATITUDE'] , e['ENTITY_LONGITUDE'] , e['ENTITY_TIME'], e['ORIGIN'], e['EXTERNAL_REFERENCE_ID'], e['LOGICAL_SOURCE_SYSTEM'], P_LOGSOURCE)
-        self.curCondis.execute(statement) 
+        try:
+            self.curCondis.execute(statement) 
+        except Exception as e:
+            print("[%s_HDB-CondisPerson]: ERROR: %s." % (TS, e)) 
      
     def CondisObject(self, O_GUID, O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3, O_ORIGIN, O_ORIGINREF, O_LOGSOURCE):
         
@@ -2416,8 +2659,10 @@ class HANAModel():
                                                                                             e['ObjectFamily'], e['MainCategory'], e['EmployeeResponsible'], e['Missing'])
         if self.Verbose == True: 
             print('[*] Insert ConDis object:\n%s' % statement)
-        
-        self.curCondis.execute(statement) 
+        try:
+            self.curCondis.execute(statement) 
+        except Exception as error:
+            print("[%s_HDB-CondisPerson]: ERROR: %s." % (TS, error))         
         self.CondisNode(O_GUID, O_GUID, e['ENTITY_TYPE'],  e['Objectdescription'], e['ENTITY_LATITUDE'], e['ENTITY_LONGITUDE'], e['ENTITY_TIME'], e['ORIGIN'] , O_ORIGINREF, e['LOGICAL_SOURCE_SYSTEM'], O_LOGSOURCE)
                
     def CondisLocation(self, L_GUID, L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1, L_ORIGIN, L_ORIGINREF, L_LOGSOURCE):
@@ -2512,23 +2757,25 @@ class HANAModel():
             print("[%s_HDB-CondisNode]: process started." % (TS))          
         
         if self.curCondis == None:
-            self.ConnectToHANA()   
+            self.ConnectToHANA() 
+            
+        if isinstance(ENTITY_LATITUDE, float) == False:
+            ENTITY_LATITUDE = 0.0
+        if isinstance(ENTITY_LONGITUDE, float) == False:
+            ENTITY_LONGITUDE = 0.0        
         
         ENTITY_DESC = ENTITY_DESC.replace("'", "").replace('"', '')
         table = '"CONDIS_SCHEMA"."com.sap.condis::condis.MASTER_NODES"'
         statement = '''INSERT INTO %s VALUES('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')''' % (table, ENTITY_GUID, ENTITY_ID, ENTITY_TYPE, ENTITY_DESC,
                                                                                                                 ENTITY_LATITUDE, ENTITY_LONGITUDE, ENTITY_TIME, 
                                                                                                                 self.ConDisSrc, self.ConDisSrc, self.ConDisSrc)
-
-        self.curCondis.execute(statement) 
-        #if LOGLABEL == 'A1':
-        '''
-            statement = ''INSERT INTO %s VALUES('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')' % (table, ENTITY_GUID, ENTITY_ID, ENTITY_TYPE, ENTITY_DESC,
-                                                                                                                   ENTITY_LATITUDE, ENTITY_LONGITUDE, ENTITY_TIME, 
-                                                                                                                        self.ConDisSrc, self.ConDisSrc, 'DEMO_SYSTEM') 
-            
+        print(statement)
+        try:
             self.curCondis.execute(statement)
-        '''  
+        except Exception as e:
+            print("[%s_HDB-CondisNode]: ERROR: %s." % (TS, e))  
+            
+
         if self.Verbose == True: 
             print('[*] Insert ConDis master node:\n%s' % statement) 
             
@@ -5095,7 +5342,7 @@ SOURCETYPE = 'Object'
 TYPE = 'o'
 TARGETGUID = 0
 TARGETTYPE = 'Event'
-#HDB = OsintHANA()
+#HDB = HANAModel()
 #HDB.goLive()
 #HDB.SPF_FOCUS_TB_IR_PERSON_INVOLVED()
 
