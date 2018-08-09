@@ -1,10 +1,10 @@
 '''
 Flask application views (routes).
 '''
-import os, time
+import os, time, csv, requests, base64
 from flask import Flask, request, session, redirect, url_for, render_template, flash, send_file, jsonify
 from werkzeug.utils import secure_filename
-from application import flask, app, utils, manage
+from application import flask, app
 from functools import wraps
 from application import models
 from application.models import (User, get_users, get_locations, get_PIR, get_STR, get_tasks, todays_recent_intel, tileStats, 
@@ -14,7 +14,7 @@ from datetime import datetime
 from threading import Thread
 threads = []
 listlimit = 5
-UPLOAD_FOLDER = '%s/application/osint/data' % (os.getcwd())
+UPLOAD_FOLDER = '%s' % (os.getcwd())
 ALLOWED_EXTENSIONS = set(['txt', 'csv', 'xlsx', 'xls', 'jpg', 'jpeg', 'png', 'gif'])
 HANA = True
 
@@ -373,6 +373,27 @@ def run_twitter():
     else:
         flash("Log in to access OSINT functionality.")
         return redirect(url_for("login")) 
+
+@app.route("/run_crawler", methods=['POST'])
+def run_crawler():
+    iObj = request.form.to_dict(flat=False)
+    TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+    print("[%s_APP-View-run_crawler]: Received: %s %s" % (TS, type(iObj), iObj))   
+    user = User(session["username"]) 
+    message = user.run_crawler(iObj)
+    
+    return jsonify(message)
+
+@app.route("/run_gdelt", methods=["POST"])
+def run_gdelt():
+    
+    iObj = request.form.to_dict(flat=False)
+    TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+    print("[%s_APP-View-run_gdelt]: Received: %s %s" % (TS, type(iObj), iObj))   
+    user = User(session["username"]) 
+    message = user.run_gdelt(iObj)
+    
+    return jsonify(message)
     
 @app.route("/run_acled", methods=["POST"])
 def run_acled():
@@ -455,33 +476,107 @@ def run_vulchild_recalc():
         message = {'message' : 'User not logged in'}
         return jsonify(message)    
 
-@app.route("/from_file", methods=["GET", "POST"])
+@app.route("/from_file", methods=["GET", "POST", "PUT"])
 def from_file():
+    TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
     if request.method == "POST":
     
         iObj = request.form.to_dict(flat=False) 
-        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-        print("[%s_APP-View-from_file]: Received: %s %s" % (TS, type(iObj), iObj))       
-        if check_user() == True:
-            
-            user = User(session["username"])
-            file = request.files['file']
-            fileType = request.form['fileType']  
-            filename = secure_filename(file.filename)
-            print(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            
-            fileURL = UPLOAD_FOLDER + "/" + filename  # / for unix, \\ for windows
-            print(file)
-            user.from_file(filename, fileType, fileURL, user.GUID)
-            flash("File Loading.")
-            return render_template("from_file.html")
         
+        print("[%s_APP-View-from_file]: Received: %s\n%s\n%s\n%s" % (TS, type(iObj), iObj['size'], iObj['name'], iObj['type'])) 
+        base64url = iObj['result'][0]
+        #File = base64.b64decode(requests.get(base64url).content)
+
+        '''
+        
+        with open('%s\\%s' % (os.getcwd(), iObj['name'][0]), 'w', newline= '') as file:
+            writer = csv.writer(file, delimiter=',')
+            for t in iObj['result']:
+                writer.writerow(t)
+        file.close()
+        print(file)
+        '''      
+        return jsonify(iObj)
+    
+    elif request.method == "PUT":
+        iObj = request.files
+        print("[%s_APP-View-from_file]: Received: %s\n%s" % (TS, type(iObj), iObj)) 
+        return jsonify(iObj)
+
+@app.route("/process_photos", methods=["POST"])
+def process_photos():
+    
+    user = User(session["username"])
+    message = {'response' : 200}
+    message['text'] = user.process_photos()
+    
+    return jsonify(message)
+
+@app.route("/upload_file", methods=["GET", "POST"])
+def upload_file():
+    TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+    if request.method == "POST":
+        user = User(session["username"])
+        file = request.files['file']
+        filename = secure_filename(file.filename)
+        cwd = os.getcwd()
+        photos = ['jpg', 'png', 'bmp', 'gif', 'pdf']
+        documents = ['doc', 'xls', 'lsx']
+        if filename[-3:] in photos:
+            ftype = 'photos'
+        elif filename[-3:] in documents:
+            ftype = 'documents'
+            
+        if '\\' in cwd:
+            path = os.path.join(app.config['UPLOAD_FOLDER'], '%s\\application\\services\\data\\%s\\%s' % (cwd, ftype, filename))
         else:
-            flash("Log in to access collection functionality.")
-            return redirect(url_for("login")) 
+            path = os.path.join(app.config['UPLOAD_FOLDER'], '%s/application/services/data/%s/%s' % (cwd, ftype, filename))
         
-    return render_template("from_file.html")
+        file.save(path)
+        
+        message = {'response' : 200, 'text' : "%s loaded to %s at %s" % (filename, path, TS)}
+        print(message)
+        #user.from_file(filename, fileType, fileURL)
+        return render_template("upload_file.html")
+    
+    else:
+        return render_template("upload_file.html")
+    
+@app.route("/etl_file", methods=["GET", "POST"])
+def etl_file():
+    TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+    if request.method == "POST":
+        iObj = request.form.to_dict(flat=False) 
+
+        user = User(session["username"])
+
+        file = request.files['file']
+        fileType = request.form['fileType']  
+        filename = secure_filename(file.filename)
+        cwd = os.getcwd()
+        photos = ['jpg', 'png', 'bmp', 'gif', 'pdf']
+        documents = ['doc', 'xls', 'lsx']
+        if filename[-3:] in photos:
+            ftype = 'photos'
+        elif filename[-3:] in documents:
+            ftype = 'documents'
+            
+        if '\\' in cwd:
+            path = os.path.join(app.config['UPLOAD_FOLDER'], '%s\\application\\services\\data\\%s' % (cwd, filename))
+        else:
+            path = os.path.join(app.config['UPLOAD_FOLDER'], '%s/application/services/data/%s' % (cwd, filename))
+        
+        file.save(path)
+        user.from_file(filename, fileType, path, user.GUID)
+           
+
+        message = {'response' : 200, 'text' : "%s loaded to %s at %s" % (filename, path, TS)}
+
+        return render_template("etl_file.html")
+    
+    else:
+        return render_template("etl_file.html")
+    
 
 @app.route("/user_tokens", methods=["POST"])
 def user_tokens():
@@ -510,6 +605,17 @@ def from_SPF():
     message = user.from_SPF(iObj)
     print(message)
         
+    return jsonify(message)
+
+
+@app.route("/polerize", methods=["POST"])
+def polerize():
+    
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    
+    print('POLERIZE')
+    message = {'response' : 200}
     return jsonify(message)
 
 @app.route("/from_HSS", methods=["GET", "POST"])
@@ -545,9 +651,10 @@ def indexFill():
             'DEP' : ['Admin', 'Analyst', 'Field', 'Manager'],
             'AE'  : ['Admin', 'Analyst', 'Field', 'Manager'],
             'USE' : ['Admin'],
-            'POL' : ['Admin', 'Analyst', 'Field', 'Manager', 'Director'],
+            'POL' : ['Analyst', 'Field', 'Manager', 'Director'],
             'PL2' : ['Admin', 'Analyst', 'Manager', 'Director'],
-            'HSS' : ['Health', 'Social'] # Health and social services
+            'HSS' : ['Health', 'Social'], # Health and social services
+            'ARA' : ['Arabic']
             }        
     
     TILESTATS = tileStats()
