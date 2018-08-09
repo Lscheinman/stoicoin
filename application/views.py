@@ -595,6 +595,24 @@ def user_tokens():
         
     return message
 
+
+@app.route("/user_systems", methods=["POST"])
+def user_systems():
+    
+    iObj = request.form.to_dict(flat=False) 
+    TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+    print("[%s_APP-View-user_tokens]: Received: %s %s" % (TS, type(iObj), iObj)) 
+    
+    if check_user() == True:
+        user = User(session["username"]) 
+        message = user.user_systems(iObj, session["username"])
+        
+    else:
+        flash("Log in to access collection functionality.")
+        return redirect(url_for("login"))     
+        
+    return message
+
 @app.route("/from_SPF", methods=["GET", "POST"])
 def from_SPF():
     
