@@ -52,10 +52,10 @@ class User:
                 self.datapath = ('%s\\services\\data\\' % (parentdir))
         else:
             if debugging == False:
-                self.authpath  = ('%s/application/services/config/' % (os.getcwd(), username))
+                self.authpath  = ('%s/application/services/config/%s' % (os.getcwd(), username))
                 self.datapath  = ('%s/application/services/data/' % (os.getcwd()))
             else:
-                self.authpath   = ('%s/application/services/config' % (os.getcwd(), username)) # debugging line 
+                self.authpath   = ('%s/application/services/config/%s' % (os.getcwd(), username)) # debugging line 
                 self.datapath  = ('%s/application/services/data/' % (parentdir))          
                 
         self.ODB = om.OrientModel(self.HDB)
