@@ -52,10 +52,10 @@ class User:
                 self.datapath = ('%s\\services\\data\\' % (parentdir))
         else:
             if debugging == False:
-                self.authpath  = ('%s/application/services/config/%s' % (os.getcwd(), username))
+                self.authpath  = ('%s/application/services/config/' % (os.getcwd(), username))
                 self.datapath  = ('%s/application/services/data/' % (os.getcwd()))
             else:
-                self.authpath   = ('%s/application/services/config/%s' % (os.getcwd(), username)) # debugging line 
+                self.authpath   = ('%s/application/services/config' % (os.getcwd(), username)) # debugging line 
                 self.datapath  = ('%s/application/services/data/' % (parentdir))          
                 
         self.ODB = om.OrientModel(self.HDB)
@@ -409,6 +409,19 @@ class User:
                 print("[%s_APP-Model-user_tokens]: File %s containing %s added.:" % (TS, auth, iObj))                     
         
         return "%s tokens created for %s." % (iObj['TokenType'], username)
+    
+    def user_systems(self, iObj, username):
+        
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        
+        auth = '%s_AUTH_HANA.json' % (self.authpath)
+        print("[%s_APP-Model-user_systems]: Creating credentials for %s at %s with %s:" % (TS, username, auth, iObj))    
+        with open(auth, 'w') as outfile:
+            json.dump(iObj, outfile)
+            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            print("[%s_APP-Model-user_systems]: File %s containing %s added.:" % (TS, auth, iObj))                     
+        
+        return "%s credentials created for %s." % (iObj['TokenType'], username)    
     
     def load_stored_procedure(self, StoredProcedureType, GUID):
         
