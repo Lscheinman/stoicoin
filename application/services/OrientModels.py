@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import pyorient
 import pandas as pd
-import time, os, json, requests, random, jsonify
+import time, os, json, requests, random, jsonify, decimal
+
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from openpyxl import load_workbook
@@ -10,12 +11,19 @@ from threading import Thread
 from passlib.hash import bcrypt
 debugging = False
 
+if debugging == False:
+    from application.services import OsintCrawler as oc
+
+else:
+    import OsintCrawler as oc
+
 class OrientModel():
     
-    def __init__(self):
+    def __init__(self, HDB):
         
         self.user = "root"
         self.pswd = "admin"
+        self.HDB  = HDB
         self.client = pyorient.OrientDB("localhost", 2424)
         self.session_id = self.client.connect(self.user, self.pswd) 
         self.Verbose = True
@@ -26,7 +34,7 @@ class OrientModel():
                          'LivesAt', 'LocatedAt', 'ModifiedBy', 'ModifiedOn', 'OfType', 'On', 'OccurredAt', 'Owns', 'PartOf', 
                          'ProcessedIntel', 'Published', 'PublishedIntel', 'PublishedTask', 'ReportedAt', 'RegisteredOn', 'ReferenceLink',
                          'RecordedBy', 'Searched', 'SubjectofContact', 'Supporting', 'Tagged', 'TaskedTo', 'TA_Reference', 'TextAnalytics',
-                         'TweetLocation', 'Tweeted']
+                         'TweetLocation', 'Tweeted', 'TA_REFERENCE_SAME_SENTENCE']
         self.setDemoDataPath()
         # If the POLER schema doesn't exist create it
         try:
@@ -34,7 +42,8 @@ class OrientModel():
         except:
             if debugging == False:
                 self.Locations  = pd.read_excel(self.BaseBook, sheetname= "Locations")
-                self.People     = pd.read_excel(self.BaseBook, sheetname= "People")                 
+                self.People     = pd.read_excel(self.BaseBook, sheetname= "People")   
+                self.Names      = pd.read_excel(self.BaseBook, sheetname= "Names") 
             self.initialize_reset()  
 
     def setDemoDataPath(self):
@@ -55,33 +64,40 @@ class OrientModel():
 
     def shutdown(self):
         self.client.shutdown(self.user, self.pswd)
+    
+    def goLive(self):
+        self.openDB('POLER')
         
     def openDB(self, DB):
         self.client.db_open(DB, self.user, self.pswd)
     
     def setToken(self):
         self.sessionToken = self.client.get_session_token()
-        self.client.set_session_token(self.sessionToken)
-        
+        self.client.set_session_token(self.sessionToken)     
     
     def createPOLER(self):
         
         try:
-            self.client.db_create('POLER', pyorient.DB_TYPE_GRAPH, pyorient.STORAGE_TYPE_MEMORY)
+            self.openDB('POLER')
+            self.client.command('select * from Object')
         except:
-            self.client.db_drop('POLER')
-            self.client.db_create('POLER', pyorient.DB_TYPE_GRAPH, pyorient.STORAGE_TYPE_MEMORY)
-        for e in self.entities:
-            self.client.command("create class %s extends V" % e)
-        for r in self.reltypes:
-            self.client.command("create class %s extends E" % r)
+            try:
+                self.client.db_create('POLER', pyorient.DB_TYPE_GRAPH, pyorient.STORAGE_TYPE_MEMORY)
+            except:
+                pass
+            for e in self.entities:
+                self.client.command("create class %s extends V" % e)
+            for r in self.reltypes:
+                self.client.command("create class %s extends E" % r)
+        self.Locations  = pd.read_excel(self.BaseBook, sheetname= "Locations")
+        self.People     = pd.read_excel(self.BaseBook, sheetname= "People")                   
             
     def closeDB(self):
         self.client.db_close()
     
     def check_date(self, E_DATE):
         
-        datePatterns = ['%Y-%m-%d', '%d-%m-%Y', '%m-%d-%Y', '%Y-%d-%m', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d', '%Y/%d/%m' ]
+        datePatterns = ['%Y-%m-%d', '%d-%m-%Y', '%m-%d-%Y', '%Y-%d-%m', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d', '%Y/%d/%m', '%d.%m.%Y']
         for p in datePatterns:
             try:
                 TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
@@ -90,8 +106,9 @@ class OrientModel():
                     print("[%s_ODB-check_date]: received pattern %s with %s and returned %s." % (TS, p, E_DATE, checkedE_DATE))  
                 return checkedE_DATE
             except:
-                pass
-        return datetime.strptime('2000-01-01', '%Y-%m-%d')    
+                checkedE_DATE = datetime.strptime('2000-01-01', '%Y-%m-%d')  
+                print("[%s_ODB-check_date]: received unknown pattern %s and returned %s." % (TS, E_DATE, checkedE_DATE)) 
+                return checkedE_DATE  
       
     
     def findUser(self, username):
@@ -193,13 +210,50 @@ class OrientModel():
         results = []
         for e in Q:
             e = e.oRecordData
+            r = {}
             r['GUID'] = e['GUID'] 
             r['CATEGORY'] = e['CLASS1']
             r['DESC'] = str(e['E_DESC'])
             if r not in results:
                 results.append(r)
         
-        return results              
+        return results  
+    
+    def getResponse(self, url, auth):
+        
+        if self.Verbose == True:
+            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            print("[%s_ODB-getResponse]: getting url %s." % (TS, url))         
+        if 'aa.com.tr' in url:
+            iObj = [{'showNavigation' : 'false',
+                     'startURL'       : url,
+                     'searchLanguage' : 'all',
+                     'searchDepth'    : '',
+                     'searchTerms'    : '',
+                     
+                     
+            }]
+            c = oc.Crawler(iObj)
+            c.startChrome()
+            t = c.getSelectionShareable()
+            return t
+        
+        if auth == None:
+            try:
+                response = requests.get(url)
+            except:
+                s = requests.Session()
+                s.trust_env = False
+                response = s.get(url)
+        else:
+            try:
+                response = requests.get(url, auth=auth)
+            except:
+                s = requests.Session()
+                s.trust_env = False
+                response = s.get(url, auth=auth)    
+                
+        return response    
     
     def get_task(self, GUID):
         
@@ -230,41 +284,53 @@ class OrientModel():
         result = {'VAL' : False, 'GUID' : GUID}
         
         sql = ''' select *, OUT().GUID, IN().GUID from %s where GUID = %s ''' % (TYPE, GUID)
+        if self.Verbose == True:
+            print('get_entity %s' % sql)
         r = self.client.command(sql)[0].oRecordData
         
+        if str(GUID)[0] == '1':
+            TYPE = 'Person'
+        if str(GUID)[0] == '2':
+            TYPE = 'Object'
+        if str(GUID)[0] == '3':
+            TYPE = 'Location'
+        if str(GUID)[0] == '4':
+            TYPE = 'Event' 
+        print(GUID, TYPE)
+
         if TYPE == 'Person':
 
             result['NAME']     = r['FNAME'] + ' ' + r['LNAME']
             result['DESC']     = "ID: %s\nGender: %s\n%s was born on %s in %s." % (GUID, r['GEN'], result['NAME'], r['DOB'], r['POB'])
             result['POLER']    = 'Person'
             result['TYPE']     = r['GEN']
-            result['CATEGORY'] = r['GEN']
-            result['CLASS1']   = r['FNAME']
-            result['CLASS2']   = r['LNAME']
-            result['DATE']     = str(r['DOB'])   
-            result['ORIGIN']   = r['ORIGIN']  
+            result['GEN']      = r['GEN']
+            result['FNAME']    = r['FNAME']
+            result['LNAME']    = r['LNAME']
+            result['DOB']      = str(r['DOB'])   
+            result['POB']      = r['ORIGIN']  
             result['VAL']      = True
      
         elif TYPE == 'Object':
             
             result['NAME']     = r['TYPE'] + ' ' + r['CATEGORY']
-            result['DESC']     = "ID: %s\nObject with description: %s. Classifications %s , %s, %s." % (GUID, r['O_DESC'], r['CLASS1'], r['CLASS2'], r['CLASS3'])            
+            result['DESC']     = "ID: %s\nObject with description: %s. Classifications %s , %s, %s." % (GUID, r['O_DESC'], r['O_CLASS1'], r['O_CLASS2'], r['O_CLASS3'])            
             result['POLER']    = 'Object'
             result['TYPE']     = r['TYPE']
             result['CATEGORY'] = r['CATEGORY']
-            result['CLASS1']   = r['CLASS1'] 
-            result['CLASS2']   = r['CLASS2'] 
-            result['DATE']     = str(r['DATE'] )   
+            result['CLASS1']   = r['O_CLASS1'] 
+            result['CLASS2']   = r['O_CLASS2'] 
+            result['DATE']     = str(r['O_CLASS3'] )   
             result['ORIGIN']   = r['ORIGIN']               
             result['VAL']      = True        
   
         elif TYPE == 'Location':
 
             result['NAME']     = r['TYPE'] + ' ' + r['L_DESC']
-            result['DESC']     = "Location at %s, %s with data %s and %s." % (r['XCOORD'], r['YCOORD'], r['ZCOORD'], r['CLASS1'])            
+            result['DESC']     = "%s. Location at %s, %s with data %s and %s." % (r['L_DESC'], r['XCOORD'], r['YCOORD'], r['ZCOORD'], r['CLASS1'])            
             result['POLER']    = 'Location'
             result['TYPE']     = r['TYPE']
-            result['CATEGORY'] = r['CATEGORY'] 
+            result['CATEGORY'] = r['L_DESC'] 
             result['CLASS1']   = r['XCOORD']
             result['CLASS2']   = r['YCOORD']
             result['DATE']     = result['CLASS1']  
@@ -273,38 +339,28 @@ class OrientModel():
                 
         elif TYPE == 'Event':
             
-            result['NAME']     = result['TYPE'] + ' ' + result['CATEGORY']
-            result['DESC']     = "Event on %s. %s" % (result['DATE'], result['DESC'])  
+            result['NAME']     = r['TYPE'] + ' ' + r['CATEGORY']
+            result['DESC']     = "Event on %s. %s" % (r['DATE'], r['E_DESC'])  
             result['POLER']    = 'Event'
             result['TYPE']     = r['TYPE'] 
             result['CATEGORY'] = r['CATEGORY'] 
-            result['CLASS1']   = str(r['E_TIME'])
-            result['CLASS2']   = r['E_DTG']
-            result['DATE']     = str(r['E_DATE'])   
-            result['ORIGIN']   = r['E_ORIGIN']                 
+            result['CLASS1']   = str(r['TIME'])
+            result['CLASS2']   = r['DTG']
+            result['DATE']     = str(r['DATE'])   
+            result['ORIGIN']   = r['ORIGIN']                 
             result['VAL']  = True      
         else:
-            return None
+            return None     
         
-        result['Relations'] = []
-        pRelCount = 0
-        oRelCount = 0
-        lRelCount = 0
-        eRelCount = 0        
+        result['Relations'], result['pRelCount'], result['oRelCount'], result['lRelCount'], result['eRelCount'] = self.get_entity_relations(GUID, TYPE)
         
-        for o in r['OUT']:
-            if str(o)[0] == '1':
-                result['Relations'].append({'TYPE' : 'Person', 'GUID' : o, 'REL' : rel})
-                pRelCount+=1 
-            if str(o)[0] == '2':
-                result['Relations'].append({'TYPE' : 'Object', 'GUID' : o, 'REL' : rel})
-                oRelCount+=1             
-                
-        
+
+        if isinstance(result['NAME'], str) == False:
+            result['NAME'] == str(result['NAME'])
         return result    
     
     
-    def get_entity_relations(self, GUID):
+    def get_entity_relations(self, GUID, TYPE):
         
         relations = []
         pRelCount = 0
@@ -312,33 +368,35 @@ class OrientModel():
         lRelCount = 0
         eRelCount = 0
         
-        sql = ''' select OUT().GUID, IN().GUID from %s where GUID = %s ''' % (TYPE, GUID)
-        r = self.client.command(sql)[0].oRecordData        
-        
-        for e in r:
-            result = {'TYPE': r[0], 'GUID': r[1], 'REL': r[2]}   
-            relations.append(result)
-            if r[0] == 'Person':
-                pRelCount+=1 
-            if r[0] == 'Object':
-                oRelCount+=1 
-            if r[0] == 'Location':
-                lRelCount+=1 
-            if r[0] == 'Event':
-                eRelCount+=1                         
-
+        sql = ''' match {class: %s, as: u, where: (GUID = %d)}.both() {class: V, as: e } return $elements''' % (TYPE, GUID)
+       
+        run = self.client.command(sql)      
+        GUIDs = []
         for r in run:
-            result = {'TYPE': r[0], 'GUID': r[1], 'REL': r[2]}   
-            relations.append(result) 
-            if r[0] == 'Person':
-                pRelCount+=1 
-            if r[0] == 'Object':
-                oRelCount+=1 
-            if r[0] == 'Location':
-                lRelCount+=1 
-            if r[0] == 'Event':
-                eRelCount+=1               
-        
+            r = r.oRecordData
+            if r['GUID'] != str(GUID):
+                for key in r.keys():
+                    if key[0:3] == 'in_' or key[0:4] == 'out_':
+                        if r['GUID'] not in GUIDs:   
+                            if int(r['GUID'][0]) == 1:
+                                t = 'Person'
+                                pRelCount+=1 
+                            if int(r['GUID'][0]) == 2:
+                                t = 'Object'
+                                oRelCount+=1 
+                            if int(r['GUID'][0]) == 3:
+                                t = 'Location'
+                                lRelCount+=1 
+                            if int(r['GUID'][0]) == 4:
+                                t = 'Event'
+                                eRelCount+=1                      
+                            if key[0:3] == 'in_':
+                                result = {'TYPE': t, 'GUID': r['GUID'], 'REL': key[3:]}    
+                            if key[0:4] == 'out_':
+                                result = {'TYPE': t, 'GUID': r['GUID'], 'REL': key[4:]}  
+                            relations.append(result)
+                            GUIDs.append(r['GUID'])
+                
         return relations, pRelCount, oRelCount, lRelCount, eRelCount    
     
     
@@ -366,6 +424,8 @@ class OrientModel():
         return results    
     
     def EntityResolve(self, entity):
+        '''
+        '''
         
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         if self.Verbose == True:
@@ -382,17 +442,28 @@ class OrientModel():
         elif entity['TYPE'] == 'Event':
             lead = '4'   
             
-        sql = '''select from %s where ORIGINREF contains '%s' ''' % (entity['TYPE'], entity['LOOKUP'])
+        sql = '''select * from %s where ORIGINREF containstext '%s' ''' % (entity['TYPE'], entity['LOOKUP'])
         if self.Verbose == True:
-            print("[%s_ODB-EntityResolve]: %s SQL\n %s." % (TS, entity['TYPE'], sql))                
-        r = self.client.command(sql)
+            print("[%s_ODB-EntityResolve]: %s SQL\n %s" % (TS, entity['TYPE'], sql)) 
+        try:
+            r = self.client.command(sql)
+        except:
+            r = []
         
         if len(r) == 0:
             # No matches so get the last GUID of the event
             GUID = int(str(lead + str(time.time()).replace(".", ""))) 
             exists = 0
         else:
-            GUID = int(r[0][0])
+            '''
+            First check if it has the same pattern
+            Second check if the pattern is exact
+            refs = ORIGINREF.split('-')
+            for r in refs: if check == r, exists
+        
+            '''
+            
+            GUID = int(r[0].oRecordData['GUID'])
             exists = 1        
         
         if self.Verbose == True:
@@ -412,17 +483,25 @@ class OrientModel():
         O_ORIGINREF = username + email
         O_GUID = self.insertObject(User, utype, O_DESC, username, password, tel, location, O_ORIGINREF, email) 
         PGUID = self.insertPerson('U', User, username, TS, location, O_GUID, O_ORIGINREF, 'A1', O_DESC)
+        if self.HDB:
+            self.HDB.insertODBUser(O_GUID, PGUID, username, bcrypt.encrypt(password), email, tel, location, image, utype)         
         self.insertRelation(PGUID, 'Person', 'AccountCreation', O_GUID, 'Object')
         if self.Verbose == True:
             TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_ODB-insertUser]: Created Associated HANA GUID: Person %s." % (TS, O_GUID))       
+            print("[%s_ODB-insertUser]: Created Associated HANA GUID: Person %s." % (TS, O_GUID))            
                 
-        return O_GUID                  
+        return O_GUID                
     
     def insertPerson(self, P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE, DESC):
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         if self.Verbose == True:
             print("[%s_ODB-insertPerson]: process started." % (TS))   
+        
+        if type(P_FNAME) != str:
+            P_FNAME = 'Unknown'
+        
+        if type(P_LNAME) != str:
+            P_LNAME = 'Unknown'        
             
         if len(DESC) == 0 or DESC == None:
             DESC = 'Record created on %s' % TS     
@@ -431,18 +510,26 @@ class OrientModel():
         if P_LNAME == 'Unk' or len(P_LNAME) < 2:
             fname = P_LNAME = "Unknown"
         P_DOB = str(self.check_date(P_DOB))[:10]
+        if type(P_POB) == str:
+            P_POB = P_POB.replace("'", "").replace('"', '')
 
         P_FNAME = (P_FNAME.replace("'", ""))[:60]
         P_LNAME = (P_LNAME.replace("'", ""))[:60]        
         P_GEN = P_GEN.strip()
-        P_ORIGINREF = ("%s%s%s%s%s" % (P_FNAME, P_LNAME, P_GEN, P_DOB, P_POB)).replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace("-", "")[:2000]
+        P_ORIGINREF = ("%s%s%s%s%s%s" % (P_FNAME, P_LNAME, P_GEN, P_DOB, P_POB, P_ORIGIN)).replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace("-", "")[:2000]
         P_GUID, exists = self.EntityResolve({'TYPE' : 'Person', 'LOOKUP' : '%s' % P_ORIGINREF})
         if exists == 0:
             sql = '''create vertex Person set GUID = '%s', GEN = '%s', FNAME = '%s', LNAME = '%s', 
             DOB = '%s', POB = '%s', ORIGIN = '%s', ORIGINREF = '%s', 
             LOGSOURCE = '%s' ''' % (P_GUID, P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE) 
             self.client.command(sql)
-        
+            
+            if self.HDB != None:
+                try:
+                    self.HDB.insertODBPerson(P_GUID, P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE, DESC)
+                except:
+                    pass
+                
         return P_GUID   
     
     def insertObject(self, O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3, O_ORIGIN, O_ORIGINREF, O_LOGSOURCE):
@@ -461,15 +548,19 @@ class OrientModel():
         O_CLASS3 = (str(O_CLASS3).replace("'", ""))[:200]
         O_ORIGINREF = str(O_ORIGINREF) 
         
+        if type(O_CATEGORY) != str:
+            O_CATEGORY = 'Unk'
+        if type(O_DESC) != str:
+            O_DESC = 'Unk'        
+        
         if len(O_LOGSOURCE) > 199:
             O_LOGSOURCE = O_LOGSOURCE[:200]  
         
         if O_CATEGORY != None:
             O_CATEGORY = (O_CATEGORY[:60]).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')   
         else:
-            O_CATEGORY = 'Unknown'
-        if len(str(O_ORIGINREF)) < 5:    
-            O_ORIGINREF = ('%s%s%s%s%s%s' % (O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3)).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')
+            O_CATEGORY = 'Unknown'   
+        O_ORIGINREF = ('%s%s%s%s%s%s' % (O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3)).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')
         O_ORIGINREF = (O_ORIGINREF[:2000]).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')   
         
         if O_DESC != None:
@@ -482,6 +573,11 @@ class OrientModel():
             ''' % (O_GUID, O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3, O_ORIGIN, O_ORIGINREF, O_LOGSOURCE)
             self.client.command(sql)
             
+            if self.HDB != None:
+                try:
+                    self.HDB.insertODBObject(O_GUID, O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3, O_ORIGIN, O_ORIGINREF, O_LOGSOURCE)
+                except:
+                    pass
         return O_GUID    
 
     def insertEvent(self, E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE):
@@ -492,7 +588,6 @@ class OrientModel():
         
         if len(E_LOGSOURCE) > 199:
             E_LOGSOURCE = E_LOGSOURCE[:200]
-        E_ORIGINREF = str(E_ORIGINREF)
         E_DATE = self.check_date(E_DATE)
         if ':' not in str(E_TIME):
             E_TIME = '12:00'
@@ -500,15 +595,15 @@ class OrientModel():
         E_DESC = '%s' % E_DESC.replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '')
         E_DESC = E_DESC[:5000] 
         if isinstance(E_DTG, int) == False: 
-            E_DTG = E_DTG.replace("-", "").replace(":", "").replace(" ", "")
+            E_DTG = str(E_DATE).replace("-", "").replace(":", "").replace(" ", "")
         if E_ORIGIN == None:
             E_ORIGIN = E_LOGSOURCE
         else:
             E_ORIGIN = '%s' % E_ORIGIN.replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '')
         if E_CLASS1 != None and isinstance(E_CLASS1, str) == True:
             E_CLASS1 = (E_CLASS1.replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', ''))[:200]
-        if len(str(E_ORIGINREF)) < 5:
-            E_ORIGINREF = ('%s%s%s%s%s%s' % (E_TYPE, E_CATEGORY, E_DESC, E_DTG, E_CLASS1, E_ORIGIN)).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')
+        
+        E_ORIGINREF = ('%s%s%s%s%s%s' % (E_TYPE, E_CATEGORY, E_DESC, E_DTG, E_CLASS1, E_ORIGIN)).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')
         E_ORIGINREF = (E_ORIGINREF[:2000]).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')
         E_ORIGIN = E_ORIGIN[:200]
 
@@ -526,14 +621,18 @@ class OrientModel():
             DTG = %s, XCOORD = %s, YCOORD = %s, ORIGIN = '%s', ORIGINREF = '%s', LOGSOURCE = '%s' ''' % (
                 E_GUID, E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE) 
             self.client.command(sql)
-
+            
+            if self.HDB != None:
+                try:
+                    self.HDB.insertODBEvent(E_GUID, E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE)
+                except:
+                    pass
         return E_GUID  
     
     def insertLocation(self, L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1, L_ORIGIN, L_ORIGINREF, L_LOGSOURCE):
         
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         L_LOGSOURCE = str(L_LOGSOURCE)
-        L_ORIGINREF = str(L_ORIGINREF)
         L_DESC = str(L_DESC).replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '')
  
         if isinstance(L_ORIGIN, str):
@@ -548,9 +647,8 @@ class OrientModel():
             L_YCOORD = 0.000 
         if len(L_LOGSOURCE) > 199:
             L_LOGSOURCE = L_LOGSOURCE[:200] 
-        
-        if len(str(L_ORIGINREF)) < 5:    
-            L_ORIGINREF = ('%s%s%s%s%s%s' % (L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1))
+  
+        L_ORIGINREF = ('%s%s%s%s%s%s' % (L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1))
         L_ORIGINREF = (L_ORIGINREF[:2000]).replace(" ", "").replace("-", "").replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace(',', '').replace('.', '').replace('?', '').replace('!', '')            
         L_CLASS1 = 0
         
@@ -559,16 +657,28 @@ class OrientModel():
             sql = ''' create vertex Location set GUID = '%s', TYPE = '%s', L_DESC = '%s', XCOORD = %s, YCOORD = %s, ZCOORD = '%s', CLASS1 = '%s', ORIGIN = '%s', ORIGINREF = '%s', LOGSOURCE = '%s' 
             ''' % (L_GUID, L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1, L_ORIGIN, L_ORIGINREF, L_LOGSOURCE)
             self.client.command(sql)
-
+            
+            if self.HDB != None:
+                try:
+                    self.HDB.insertODBLocation(L_GUID, L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1, L_ORIGIN, L_ORIGINREF, L_LOGSOURCE)
+                except:
+                    pass                
         return L_GUID 
     
     def insertRelation(self, SOURCEGUID, SOURCETYPE, TYPE, TARGETGUID, TARGETTYPE):
         
-        sql = ''' select expand(out('%s')) from %s where GUID = %s ''' % (TYPE, SOURCETYPE, SOURCEGUID)
+        sql = ''' match {class: V, as: u, where: (GUID = %s)}.both('%s') {class: V, as: e, where: (GUID = %s) } return $elements ''' % (TARGETGUID, TYPE, SOURCEGUID)
         check = self.client.command(sql)
         if len(check) == 0:
             sql = ''' create edge %s from (select from %s where GUID = %s) to (select from %s where GUID = %s) ''' % (TYPE, SOURCETYPE, SOURCEGUID, TARGETTYPE, TARGETGUID)
+            print(sql)
             self.client.command(sql)
+            
+            if self.HDB != None:
+                try:
+                    self.HDB.insertRelation(SOURCEGUID, SOURCETYPE, TYPE, TARGETGUID, TARGETTYPE)
+                except:
+                    pass                    
 
     def preLoadLocationsThread(self):
         #TODO bubble up values for progress meters
@@ -695,6 +805,7 @@ class OrientModel():
         RawEvents = [
         ('Crime', 'Domestic Violence', 'Chris was charged with the crime by Patty.', C1),
         ('Crime', 'Drug Trafficking', 'June was charged with the crime by Patty.', C1),
+        ('Social Services', 'Assessment', 'Tim conducted a route call on Eric and recorded that Ethel is his only point of contact.', C1),
         ('Crime', 'Child Abuse', 'Connie was charged with the crime.', C1),
         ('Social Services', 'Assessment', 'Tim conducted an assessment on Johnny.', B1),
         ('Crime', 'Child Abuse', 'Connie was charged with the crime.', C1),
@@ -749,7 +860,9 @@ class OrientModel():
             if 'Eric' in e['E_DESC']:
                 self.insertRelation(Eric, Person, SubjectofContact, e['GUID'], Event)    
             if 'Hakim' in e['E_DESC']:
-                self.insertRelation(Hakim, Person, SubjectofContact, e['GUID'], Event)              
+                self.insertRelation(Hakim, Person, SubjectofContact, e['GUID'], Event)      
+            if 'Ethel' in e['E_DESC']:
+                self.insertRelation(Hakim, Person, SubjectofContact, e['GUID'], Event)               
         
         self.insertRelation(June, Person, Family, Johnny, Person)
         self.insertRelation(Tim, Person, Knows, June, Person)
@@ -758,7 +871,12 @@ class OrientModel():
         self.insertRelation(Jimmy, Person, Knows, Tim, Person)
         self.insertRelation(Sid, Person, Family, Eric, Person)
         self.insertRelation(Sid, Person, Family, Ethel, Person)
+        self.insertRelation(Sid, Person, Knows, Connie, Person)
         self.insertRelation(Ethel, Person, Family, Eric, Person)
+    
+    def TextAnalytics(self, TA_CONFIG, text, TA_RUN, ODB):
+        if self.HDB != None:
+            self.HDB.TextAnalytics(TA_CONFIG, text, TA_RUN, ODB)
     
     def preLoadTasks(self):
         
@@ -862,8 +980,7 @@ class OrientModel():
                         TARGETGUID = e['GUID']
                         TARGETTYPE = self.check_entity_type(TARGETGUID)
                         print("rel with %s %s %s %s %s" % (SOURCEGUID, SOURCETYPE, TYPE, TARGETGUID, TARGETTYPE))
-                   
-    
+                      
     
     def update_user(self, iObj):
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')       
@@ -916,24 +1033,43 @@ class OrientModel():
     def initialize_users(self):
         password = 'welcome123'
         self.insertUser('SYSTEM', bcrypt.encrypt(password), 'SYSTEM@email.com', '000-000', 'A1A2A3B1C1', 'None', 'Admin')
+        
         password = 'test123'
         self.insertUser('Tim S', bcrypt.encrypt(password), 'TimSoshel@email.com', '555-5555', 'A1A2A3B1', 'None', 'Social')
+        
         password = 'test123'
         self.insertUser('Patty', bcrypt.encrypt(password), 'Patty@email.com', '555-5555', 'A1A2A3B1C1', 'None', 'Field')
+        
         password = 'test123'
         self.insertUser('Farah', bcrypt.encrypt(password), 'Farah@email.com', '555-5555', 'A1A2A3B1C1', 'None', 'Manager') 
+
         password = 'test123'
-        self.insertUser('Hakim', bcrypt.encrypt(password), 'Hakim@email.com', '555-5555', 'A1A2A3B1B2', 'None', 'Health')           
+        self.insertUser('Hakim', bcrypt.encrypt(password), 'Hakim@email.com', '555-5555', 'A1A2A3B1B2', 'None', 'Health')               
+        
         password = 'test123'
-        self.insertUser('Hans', bcrypt.encrypt(password), 'Hans@email.com', '555-5555', 'A1A2A3B1C1', 'None', 'Analyst')           
+        self.insertUser('Hans', bcrypt.encrypt(password), 'Hans@email.com', '555-5555', 'A1A2A3B1C1', 'None', 'Analyst')        
+        
+        password = 'test123'
+        self.insertUser('Fahim', bcrypt.encrypt(password), 'Fahim@email.com', '555-5555', 'A1A2A3B1C1', 'None', 'Arabic')             
+        
         password = 'cantloginbecauserolewontseeanything'        
         self.insertUser('Open Task', bcrypt.encrypt(password), 'OpenTasks@email.com', '555-5555', 'Open Task', 'None', 'Open to any role')        
-        
+            
     def initialize_reset(self):
+    
+        TS1 = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         try:
+            for s in ['Person', 'Object', 'Location', 'Event']:
+                self.client.command( 'DELETE from %s UNSAFE' % s)
+
             self.client.db_drop('POLER', pyorient.STORAGE_TYPE_MEMORY)
         except:
             pass
+        if self.HDB:
+            self.HDB.initialize_reset()
+            self.HDB.initialize_POLER()
+            self.HDB.initialize_CONDIS_Customization()
+            
         self.createPOLER()
         self.initialize_users()
         self.preLoadPeopleThread()
@@ -941,6 +1077,9 @@ class OrientModel():
         self.preLoadTasks()
         self.openDB('POLER')
         self.client.tx_commit()
+        TS2 = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        
+        return 'Reset started at %s and completed at %s' % (TS1, TS2)
         
     def tileStats(self):
         
@@ -1079,10 +1218,6 @@ class OrientModel():
                 }
         
         # Timestamp the process
-        if self.Verbose == True:
-            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_ODB-menuFill]: Process started..." % (TS))  
-        
         menu['USERS']    = self.get_users()
         menu['VULCHILD'] = self.Graph_VP_CHILDREN(1, 7)
         menu['VULADULT'] = self.Graph_VP_CHILDREN(1, 5)
@@ -1104,9 +1239,6 @@ class OrientModel():
                 menu['LOCATIONS'].append(p) 
         menu['LOCATIONS'].append({'NAME' : '_NA_', 'GUID' : 0})
         menu['LOCATIONS'] = sorted(menu['LOCATIONS'], key=lambda i: i['NAME'].lower())
-        if self.Verbose == True:
-            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_ODB-menuFill]: %d Locations loaded" % (TS, len(menu['LOCATIONS']))) 
         
         sql = ''' select GUID, CATEGORY, ORIGIN, O_DESC, CLASS2, LOGSOURCE from Object where TYPE = 'PIR' order by CATEGORY '''
         r = self.client.command(sql)
@@ -1118,14 +1250,14 @@ class OrientModel():
             d['ORIGIN']   = e['ORIGIN'] 
             d['NAME']     = "%s %s" % (d['CATEGORY'], e['O_DESC'])
             d['CLASS2']   = e['CLASS2'] 
-            print(e)
+            
+            if isinstance(result['NAME'], str) == False:
+                d['NAME'] == str(d['NAME'])            
             if str(e['LOGSOURCE']) in uaa:           
                 menu['PIR'].append(d) 
+                
         menu['PIR'].append({'NAME' : '0', 'GUID' : 0})
         menu['PIR'] = sorted(menu['PIR'], key=lambda i: i['NAME'].lower())
-        if self.Verbose == True:
-            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_ODB-menuFill]: %d PIR loaded" % (TS, len(menu['PIR'])))   
         
         sql = '''select GUID, CATEGORY, O_CLASS1, O_DESC, LOGSOURCE  from Object WHERE TYPE = 'STRAT' ORDER BY O_DESC '''
         r = self.client.command(sql)
@@ -1135,14 +1267,13 @@ class OrientModel():
             d['GUID']     = e['GUID']
             d['CATEGORY'] = e['CATEGORY']
             d['CLASS1']   = e['O_CLASS1']
-            d['NAME']     = "%s: %s" % (e['CATEGORY'], e['O_DESC'])   
+            d['NAME']     = "%s: %s" % (e['CATEGORY'], e['O_DESC']) 
+            if isinstance(result['NAME'], str) == False:
+                d['NAME'] == str(d['NAME'])               
             if e['LOGSOURCE'] in uaa:  
                 menu['STR'].append(d) 
         menu['STR'].append({'NAME' : '_NA_', 'GUID' : 0})
         menu['STR'] = sorted(menu['STR'], key=lambda i: i['NAME'].lower())
-        if self.Verbose == True:
-            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_ODB-menuFill]: %d STRAT loaded" % (TS, len(menu['STR'])))  
         
         sql = '''select FNAME, LNAME, GUID, LOGSOURCE FROM Person '''
         r = self.client.command(sql)
@@ -1151,14 +1282,13 @@ class OrientModel():
             e = e.oRecordData
             d['NAME'] = e['FNAME'] + ' ' + e['LNAME']
             d['GUID'] = e['GUID'] 
+            if isinstance(d['NAME'], str) == False:
+                d['NAME'] == str(d['NAME'])               
             if e['LOGSOURCE'] in uaa:
                 menu['PERSONS'].append(d)
         menu['PERSONS'].append({'NAME' : '_NA_', 'GUID' : 0})
         menu['PERSONS'] = sorted(menu['PERSONS'], key=lambda i: i['NAME'].lower())
-        if self.Verbose == True:
-            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_ODB-menuFill]: %d Persons loaded" % (TS, len(menu['PERSONS']))) 
-        
+
         sql = '''select CATEGORY, GUID, O_CLASS1, O_CLASS2, O_CLASS3, TYPE, O_DESC, LOGSOURCE from Object WHERE TYPE != 'User' order by O_DESC '''
         r = self.client.command(sql)
         for e in r:
@@ -1168,13 +1298,12 @@ class OrientModel():
             d['NAME'] = e['CATEGORY'] + ' ' + e['TYPE'] 
             d['DESC'] = class1 + ' ' + e['O_DESC'] + ' ' + e['O_CLASS3']     
             d['GUID'] = e['GUID']
+            if isinstance(d['NAME'], str) == False:
+                d['NAME'] == str(d['NAME'])               
             if e['LOGSOURCE'] in uaa:
                 menu['OBJECTS'].append(d) 
         menu['OBJECTS'].append({'NAME' : '_NA_', 'GUID' : 0})
         menu['OBJECTS'] = sorted(menu['OBJECTS'], key=lambda i: i['NAME'].lower())
-        if self.Verbose == True:
-            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_ODB-menuFill]: %d Objects loaded" % (TS, len(menu['OBJECTS'])))    
         
         sql = '''select DTG, GUID, E_DESC, LOGSOURCE from Event order by DTG DESC '''
         r = self.client.command(sql)
@@ -1184,13 +1313,12 @@ class OrientModel():
             d['NAME'] = e['DTG']
             d['GUID'] = e['GUID'] 
             d['DESC'] = e['E_DESC']
+            if isinstance(d['NAME'], str) == False:
+                d['NAME'] == str(d['NAME'])               
             if e['LOGSOURCE'] in uaa:
                 menu['EVENTS'].append(d) 
         menu['EVENTS'].append({'NAME' : 00000, 'GUID' : 0})
         menu['EVENTS'] = sorted(menu['EVENTS'], key=lambda i: i['NAME'])
-        if self.Verbose == True:
-            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_ODB-menuFill]: %d Events loaded" % (TS, len(menu['EVENTS']))) 
         
         sql = '''select GUID, CATEGORY, E_DESC, CLASS1, DATE, DTG, ORIGIN, XCOORD, YCOORD, LOGSOURCE from Event where CATEGORY = 'Task'  '''
         r = self.client.command(sql)
@@ -1207,13 +1335,12 @@ class OrientModel():
             d['STATUS'] = e['ORIGIN']
             d['FROM']   = e['XCOORD']
             d['TO']     = e['YCOORD']
+            if isinstance(d['NAME'], str) == False:
+                d['NAME'] == str(d['NAME'])               
             if e['LOGSOURCE'] in uaa:
                 menu['TASKS'].append(d) 
         menu['TASKS'] = sorted(menu['TASKS'], key=lambda i: i['DTG'], reverse=True)
-        menu['Tprofile'].append(d)
-        if self.Verbose == True:
-            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_ODB-menuFill]: %d Tasks loaded" % (TS, len(menu['TASKS'])))         
+        menu['Tprofile'].append(d)     
             
         sql = ''' select @class from E '''
         r = self.client.command(sql)
@@ -1223,11 +1350,19 @@ class OrientModel():
             d['RELTYP'] = e['class']
             if d not in menu['RELS']:
                 menu['RELS'].append(d) 
-        menu['RELS'] = sorted(menu['RELS'], key=lambda i: i['RELTYP'].lower())
-        if self.Verbose == True:
-            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_ODB-menuFill]: %d Relation types loaded" % (TS, len(menu['RELS'])))         
+        menu['RELS'] = sorted(menu['RELS'], key=lambda i: i['RELTYP'].lower())      
         
+        for k in menu.keys():
+            try:
+                for e in menu[k]:
+                    try:
+                        if type(e['NAME']) == decimal.Decimal:
+                            e['NAME'] = str(e['NAME'])
+                    except:
+                        pass
+            except:
+                pass
+                
         return menu
     
     def Graph_VP_CHILDREN(self, staPath, endPath):
@@ -1252,6 +1387,7 @@ class OrientModel():
         Q = self.client.command(sql)
         results = []
         firstrn = True
+        Risks = ['crime']
         for e in Q:
             e = e.oRecordData
             r = {}
@@ -1268,8 +1404,10 @@ class OrientModel():
                 R['CATEGORY'] = e['e_CATEGORY']
                 R['DATE']     = e['e_DATE']
                 R['E_GUID']   = e['e_GUID']
-                if R not in r['RISKS']:
-                    r['RISKS'].append(R)
+                if R['TYPE'].lower() in Risks:
+                    if R not in r['RISKS']:
+                        r['RISKS'].append(R)
+                        
                 r['VPSCORE']  = len(r['RISKS'])
                 results.append(r)
                 firstrn = False
@@ -1311,16 +1449,53 @@ class OrientModel():
         results = sorted(results, key=lambda i: i['VPSCORE'], reverse=False)              
         return results    
 
+    def Graph_VP_Risks(self, staPath, endPath, GUID, Profile):
+        
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        if self.Verbose == True:
+            print("[%s_ODB-Graph_VP_Risks]: process started:\n\t%s %s %s %s" % (TS, staPath, endPath, GUID, Profile))      
 
-#OM = OrientModel()
-#OM.initialize_reset()
+        both = 'both()'
+        if endPath > 1:
+            i = 1
+            while i < endPath:
+                both = both + '.both()'
+                i+=1
+                
+        sql = '''match {class: Person, as: p, where: (GUID = %s)}.%s {class: Event, as: e, where: (TYPE = 'Crime')} 
+        return e.GUID, e.CATEGORY, e.DATE, e.E_DESC, e.TYPE
+        ''' % (GUID, both)
+                
+        Q = self.client.command(sql)
+        
+        Profile['RISKS'] = []
+        for e in Q:
+            e = e.oRecordData
+            R = {}
+            print(e)
+            R['DESC']     = str(e['e_E_DESC'])
+            R['TYPE']     = str(e['e_TYPE'])
+            R['CATEGORY'] = str(e['e_CATEGORY'])
+            R['DATE']     = str(e['e_DATE'])
+            R['GUID']     = str(e['e_GUID'])  
+            Profile['RISKS'].append(R)
+         
+        return Profile 
+
+'''
+import HANAModels
+HDB = HANAModels.HANAModel()
+OM = OrientModel(HDB)
+OM.initialize_reset()
 #OM.openDB('POLER')
+'''
 #OM.tileStats()
 #OM.initialize_reset()
 #GUID = 21529578459757368
 #TYPE = 'Person'
-#t = OM.get_entity(GUID, TYPE)
-#j = OM.get_entity_relations(GUID)
+#OM.get_entity(115306969894108553, 'Person')
+#t = OM.get_entity(115305351820998447, 'Person')
+#j = OM.get_entity_relations(115307044180029824, 'Person')
 #OM.get_users()
 #OM.Graph_VP_CHILDREN(1, 10)
 #OM.menuFill('A1B1C1A2B2C2A3B3C3')
