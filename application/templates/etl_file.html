@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% block body %}
+    <h2>Collective Intelligence | Single File ETL</h2>
+    <form action="{{ url_for('etl_file') }}" method="post" enctype="multipart/form-data">
+		<dl>
+		    <p><dt>File Type:</dt></p>
+		    <select class="form-control" name="fileType">
+		    <option value="POLICE">Police Record</option>
+		    <option value="SOCIAL">Social Services</option>
+		    <option value="EDUCATION">Education</option>
+		    <option value="ACLED">ACLED</option>
+		    <option value="GTD">GTD</option>
+		    <option value="HuMINT">HUMINT</option>
+		    </select>
+		</dl>
+	<input class="form-control" type="file" name="file">
+	<input type="submit" value="Start" class="btn btn-primary">
+    </form>
+{% endblock %}
