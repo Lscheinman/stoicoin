@@ -4923,33 +4923,39 @@
                                                                         singleContainerFullSize="false" 
                                                                 >
                                                                 <f:content>
-                                                                        <Label text="Server Info" />
+                                                                        <Label text="Host info" />
                                                                         <Input                                                              
-                                                                                id="ServerInfo"
+                                                                                id="SYShost"
                                                                                 class="sapUiSmallMarginBottom"
                                                                                 >
 
-                                                                        <Label text="SYSTEM name" />
+                                                                        <Label text="Port" />
                                                                         <Input                                                              
-                                                                                id="SYSTEMname"
+                                                                                id="SYSport"
                                                                                 class="sapUiSmallMarginBottom"
                                                                                 >
                                                                         </Input>
-                                                                        <Label text="SYSTEM pass" />
+                                                                        <Label text="System User" />
                                                                         <Input                                                              
-                                                                                id="SYSTEMpass"
+                                                                                id="SYSuser"
                                                                                 class="sapUiSmallMarginBottom"
                                                                                 >
                                                                         </Input>
-                                                                        <Label text="ConDis name" />
+                                                                        <Label text="System pass" />
                                                                         <Input                                                              
-                                                                                id="ConDisname"
+                                                                                id="SYSpassword"
                                                                                 class="sapUiSmallMarginBottom"
                                                                                 >
                                                                         </Input>
-                                                                        <Label text="ConDis secret" />
+                                                                        <Label text="ConDis user" />
                                                                         <Input                                                              
-                                                                                id="ConDissecret"
+                                                                                id="userCondis"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+                                                                        <Label text="ConDis pass" />
+                                                                        <Input                                                              
+                                                                                id="pswdCondis"
                                                                                 class="sapUiSmallMarginBottom"
                                                                                 >
                                                                         </Input>
@@ -8262,12 +8268,12 @@
                         
                                 var UPDATE = {}
                                
-                                UPDATE['client_key']  = this.byId("ServerInfo").getValue();
-                                UPDATE['client_secret'] = this.byId("SYSTEMname").getValue();
-                                UPDATE['token']   = this.byId("SYSTEMpass").getValue();
-                                UPDATE['token_secret']  = this.byId("ConDisname").getValue();
-                                UPDATE['TokenType']  = this.byId("ConDissecret")..getValue();
-                                
+                                UPDATE['host']  = this.byId("SYShost").getValue();
+                                UPDATE['port'] = this.byId("SYSport").getValue();
+                                UPDATE['user']   = this.byId("SYSuser").getValue();
+                                UPDATE['password']  = this.byId("SYSpassword").getValue();
+                                UPDATE['userCondis']  = this.byId("userCondis").getValue();
+                                UPDATE['pswdCondis']  = this.byId("pswdCondis").getValue();
                                 var oModel = new sap.ui.model.json.JSONModel();
                                 var aData = jQuery.ajax({
                                         type : "POST",
