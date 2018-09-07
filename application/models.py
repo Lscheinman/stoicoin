@@ -20,6 +20,8 @@ if debugging == False:
     from application.services import LeonardoModels as leo
     from application.services import OsintRSS as rss
     from application.services import OsintCrawler as oc
+    from application.services import PolerService as ps
+    from application.services import OsintFacebook as fb
 else:
     from services import OsintTwitter as ot #debugging line
     from services import OsintGraph as og #debugging line
@@ -45,24 +47,36 @@ class User:
             
         if '\\' in os.getcwd():
             if debugging == False:
-                self.authpath = ('%s\\application\\services\\config\\%s' % (os.getcwd(), username))
+                self.authpath = ('%s\\application\\services\\config\\' % (os.getcwd()))
                 self.datapath  = ('%s\\application\\services\\data\\' % (os.getcwd()))
+                self.upload  = ('%s\\application\\services\\data\\upload\\' % (os.getcwd()))
+                self.processed = ('%s\\application\\services\\data\\processed\\' % (os.getcwd()))
             else:
-                self.authpath = ('%s\\config\\%s' % (os.getcwd(), username)) # debugging line  
+                self.authpath = ('%s\\config\\' % (os.getcwd())) # debugging line  
                 self.datapath = ('%s\\services\\data\\' % (parentdir))
+                self.upload = ('%s\\services\\data\\upload\\' % (parentdir))
+                self.processed = ('%s\\services\\data\\processed\\' % (parentdir))
         else:
             if debugging == False:
-                self.authpath  = ('%s/application/services/config/' % (os.getcwd(), username))
+                self.authpath  = ('%s/application/services/config/' % (os.getcwd()))
                 self.datapath  = ('%s/application/services/data/' % (os.getcwd()))
+                self.upload    = ('%s/application/services/data/upload/' % (os.getcwd()))
+                self.processed    = ('%s/application/services/data/processed/' % (os.getcwd()))
             else:
-                self.authpath   = ('%s/application/services/config' % (os.getcwd(), username)) # debugging line 
-                self.datapath  = ('%s/application/services/data/' % (parentdir))          
+                self.authpath   = ('%s/application/services/config/' % (os.getcwd())) # debugging line 
+                self.datapath  = ('%s/application/services/data/' % (parentdir)) 
+                self.upload    = ('%s/application/services/data/upload/' % (parentdir))
+                self.processed    = ('%s/application/services/data/processed/' % (parentdir))
                 
         self.ODB = om.OrientModel(self.HDB)
         self.ODB.openDB('POLER')
         self.LEO = leo.LeonardoModel(self.ODB)
         self.PubDB = op.OsintPubDB(self.ODB)
         self.RSS = rss.OsintRSS(self.ODB)
+        self.POLER = ps.POLERmap(self.datapath, self.ODB, self.processed, self.authpath, self.upload)
+        with open(str(self.authpath) + '%s_AUTH_Facebook.json' % self.username, 'r') as FB:
+            fbAuth = json.load(FB)
+        self.Facebook = fb.OsintFacebook(fbAuth, self.ODB)
         self.user = self.find()
         self.threads = []
         self.HANA = False
@@ -105,6 +119,27 @@ class User:
         print("[%s_APP-Model-menus]: %d relations loaded.:" % (TS, len(self.Rcache)))
         print(('[%s_APP-Model-menus]: User menus loaded with total of %d entities' % (TS, (len(self.Lcache) + len(self.PIRcache) + len(self.STRcache) + len(self.Pcache) + len(self.Ocache) + len(self.Ecache) + len(self.Rcache)))))
         return menu
+    
+    def POLERgetFile(fname):
+        view, fileURL = self.POLER.getFile(fname)
+        headers = self.POLER.getColumns()
+        return headers
+    
+    def POLERcreateEntity(etype, eName):
+        entity = self.POLER.createEntity(etype, eName)
+        return entity
+    
+    def POLERmapAttribute(eName, eAttribute, eVal):
+        entity = self.POLER.mapAttribute(eName, eAttribute, eVal)
+        return entity
+    
+    def POLERmapRelationship(eSource, eTarget, Label):
+        rMap = self.POLER.mapRelationship(eSource, eTarget, Label)
+        return rMap
+    
+    def POLERcreateMap(mName):
+        pMap = self.POLER.createMap(mName)
+        return pMap
     
     def update_user(self, iObj):
         message = self.ODB.update_user(iObj)
@@ -401,16 +436,23 @@ class User:
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         
         if iObj['TokenType'][0] == 'twitter':
-            auth = '%s_AUTH_Twitter.json' % (self.authpath)
-            print("[%s_APP-Model-user_tokens]: Creating tokens for %s at %s with %s:" % (TS, username, auth, iObj))    
-            with open(auth, 'w') as outfile:
-                json.dump(iObj, outfile)
-                TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-                print("[%s_APP-Model-user_tokens]: File %s containing %s added.:" % (TS, auth, iObj))                     
+            auth = '%s_AUTH_Twitter.json' % (self.authpath)  
+        elif iObj['TokenType'][0] == 'facebook':
+            auth = '%s_AUTH_Facebook.json' % self.authpath
+        
+        print("[%s_APP-Model-user_tokens]: Creating tokens for %s at %s with %s:" % (TS, username, auth, iObj))     
+        with open(auth, 'w') as outfile:
+            json.dump(iObj, outfile)
+            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            print("[%s_APP-Model-user_tokens]: File %s containing %s added.:" % (TS, auth, iObj))             
         
         return "%s tokens created for %s." % (iObj['TokenType'], username)
     
     def user_systems(self, iObj, username):
+        
+        #TODO: initiate ODB-HDB synch upon connection
+        # Test connections to HANA systems
+        # Test assignment of new users
         
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         
@@ -453,11 +495,16 @@ class User:
     
     def load_user_tokens(self, TokenType, username):
         
-        if TokenType == 'twitter':
-            auth = '%s_AUTH_Twitter.json' % (self.authpath)
-        with open(auth) as json_file:
-            print('Getting auth %s' % auth)
-            return json.load(json_file)  
+        try:
+            if TokenType == 'twitter':
+                auth = '%s_AUTH_Twitter.json' % (self.authpath)
+            elif TokenType == 'facebook':
+                auth = '%s_AUTH_Facebook.json' % (self.authpath)
+            with open(auth) as json_file:
+                print('Getting auth %s' % auth)
+                return json.load(json_file)  
+        except:
+            return None
         
     def get_News(self):
         newsChannels = ['BBCWorld']
@@ -817,6 +864,8 @@ class User:
     
     def run_crawler(self, iObj):
         
+        #TODO query database for existing links to match against already scraped links to prevent duplicate collection
+        
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         
         def run_cycle(crawler):
@@ -857,9 +906,14 @@ class User:
                     E_DATE     = l['date']
                 except:
                     E_DATE     = TS[:10]
+
                 storyGUID = self.ODB.insertEvent(E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE)
                 self.ODB.insertRelation(crawlGUID, 'Event', 'ReferenceLink', storyGUID, 'Event')
                 self.ODB.insertRelation(websiteGUID, 'Object', 'Published', storyGUID, 'Event')
+                if 'nairaland.com' in crawler.startURL:
+                    userGUID = self.ODB.insertObject('User', 'Nairaland', l['user'], None, None, None, None, None, 'A1')
+                    self.ODB.insertRelation(storyGUID, 'Event', 'PublishedBy', userGUID, 'Object')
+                
                 self.run_ta(E_DESC, 'EXTRACTION_CORE')
         
         crawler = oc.Crawler(iObj)
@@ -1064,6 +1118,67 @@ class User:
         messages['message'] = self.ODB.merge_entities('person', iObj['AGUID'], iObj['PGUID'])
       
         return messages
+    
+    def POLERIZE(self, iObj):
+        
+        response = {}
+        if int(iObj['step']) == 1:
+            response = self.POLER.uploadFile(self.upload)
+             
+        elif int(iObj['step']) == 2:
+            if iObj['entity'][0] == 'Person':
+                response = {'TYPE' : 'Person', 'LABEL' : iObj['name'][0], 'Attributes' : ['P_GEN', 'P_FNAME', 'P_LNAME', 'P_DOB', 'P_POB', 'P_ORIGIN', 'P_ORIGINREF', 'P_LOGSOURCE', 'DESC']}
+    
+            if iObj['entity'][0] == 'Object':
+                response = {'TYPE' : 'Object', 'LABEL' : iObj['name'][0], 'Attributes' : ['O_TYPE', 'O_CATEGORY', 'O_DESC', 'O_CLASS1', 'O_CLASS2', 'O_CLASS3', 'O_ORIGIN', 'O_ORIGINREF', 'O_LOGSOURCE']}
+            
+            if iObj['entity'][0] == 'Location':
+                response = {'TYPE' : 'Location', 'LABEL' : iObj['name'][0], 'Attributes' : ['L_TYPE', 'L_DESC', 'L_XCOORD', 'L_YCOORD' , 'L_ZCOORD' , 'L_CLASS1', 'L_ORIGIN', 'L_ORIGINREF', 'L_LOGSOURCE']}
+            
+            if iObj['entity'][0] == 'Event':
+                response = {'TYPE' : 'Event', 'LABEL' : iObj['name'][0], 'Attributes' : ['E_TYPE', 'E_CATEGORY' , 'E_DESC', 'E_LANG', 'E_CLASS1', 'E_TIME', 'E_DATE', 'E_DTG', 'E_XCOORD', 'E_YCOORD', 'E_ORIGIN', 'E_ORIGINREF', 'E_LOGSOURCE']}
+             
+        elif int(iObj['step']) == 5:
+            
+            MapJSON = '%sPOLE_MAP_%s.json' % (self.authpath, iObj['mapname'])
+            with open(MapJSON, 'w') as outfile:
+                json.dump(iObj, outfile)
+        
+            response = {'status' : 200, 'message' : MapJSON}
+            
+        elif int(iObj['step']) == 0:
+            
+            response = {'status' : 200, 'maps' : [], 'files' : []}
+            maps = self.POLER.getMaps()
+            for m in maps:
+                response['maps'].append({'TYPE' : m['mapname']})
+            files = self.POLER.getProcessedFiles()
+            for f in files:
+                response['files'].append({'TYPE' : f})
+                
+        elif int(iObj['step']) == 6:
+            
+            # Get the file and map
+            response['map'] = self.POLER.setvMap(iObj['map'])
+            view, fileURL = self.POLER.getFile(iObj['file'])
+            
+            # Create the relationship between entities representing the file and map
+            O_ORIGIN = O_LOGSOURCE = 'POLERIZE'
+            mapGUID  = self.ODB.insertObject('Map', iObj['map'], response['map'], 0, 0, 0, O_ORIGIN, 0, O_LOGSOURCE)
+            filetype = fileURL[fileURL.find('.'):]
+            if len(filetype) == 1:
+                filetype = 'Unknown'
+            fileGUID = self.ODB.insertObject('File', filetype, fileURL, mapGUID, 0, 0, O_ORIGIN, 0, O_LOGSOURCE)
+            self.ODB.insertRelation(fileGUID, 'Object', 'OfType', mapGUID, 'Object')
+            
+            T = Thread(target=self.POLER.POLERExtract, args=(view, iObj['file'], fileGUID, ))
+            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            response['message'] = 'Started extraction of %s using %s at %s' % (iObj['file'], iObj['map'], TS)
+            #TS.start()
+            self.POLER.POLERExtract(view, iObj['file'], fileGUID)
+            
+        return response
+    
     
     def from_file(self, filename, fileType, fileURL, GUID):
         
