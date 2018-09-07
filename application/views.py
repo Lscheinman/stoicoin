@@ -1,7 +1,7 @@
 '''
 Flask application views (routes).
 '''
-import os, time, csv, requests, base64
+import os, time, csv, requests, base64, json
 from flask import Flask, request, session, redirect, url_for, render_template, flash, send_file, jsonify
 from werkzeug.utils import secure_filename
 from application import flask, app
@@ -542,6 +542,38 @@ def upload_file():
     else:
         return render_template("upload_file.html")
     
+@app.route("/map_file", methods=["GET", "POST"])
+def map_file():
+    TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+    if request.method == "POST":
+        iObj = request.form.to_dict(flat=False) 
+    
+        user = User(session["username"])
+    
+        file = request.files['file']
+        filename = secure_filename(file.filename)
+        cwd = os.getcwd()
+        photos = ['jpg', 'png', 'bmp', 'gif', 'pdf']
+        documents = ['doc', 'xls', 'lsx']
+        if filename[-3:] in photos:
+            ftype = 'photos'
+        elif filename[-3:] in documents:
+            ftype = 'documents'
+            
+        if '\\' in cwd:
+            path = os.path.join(app.config['UPLOAD_FOLDER'], '%s\\application\\services\\data\\upload\\%s' % (cwd, filename))
+        else:
+            path = os.path.join(app.config['UPLOAD_FOLDER'], '%s/application/services/data/upload/%s' % (cwd, filename))
+        
+        file.save(path) 
+        flash("%s staged for analysis.\nContinue Loading?")
+        response = {'status' : 200, 'message' : 'All good'}
+        
+        return render_template("map_file.html")
+    
+    else:
+        return render_template("map_file.html")
+
 @app.route("/etl_file", methods=["GET", "POST"])
 def etl_file():
     TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
@@ -569,7 +601,6 @@ def etl_file():
         file.save(path)
         user.from_file(filename, fileType, path, user.GUID)
            
-
         message = {'response' : 200, 'text' : "%s loaded to %s at %s" % (filename, path, TS)}
 
         return render_template("etl_file.html")
@@ -625,15 +656,24 @@ def from_SPF():
         
     return jsonify(message)
 
-
-@app.route("/polerize", methods=["POST"])
+@app.route("/polerize", methods=["GET", "POST"])
 def polerize():
+    tempObj = request.form.to_dict(flat=False) 
     
-    file = request.files['file']
-    filename = secure_filename(file.filename)
-    
-    print('POLERIZE')
-    message = {'response' : 200}
+    if 'step' in tempObj.keys():
+        iObj = tempObj
+        iObj['step'] = iObj['step'][0]
+    else:
+        for k in tempObj.keys():
+            if len(k) > 2:
+                iObj = json.loads(k)
+            
+    TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+    print("[%s_APP-View-polerize] Step : %s" % (TS, iObj['step']))   
+    user = User(session["username"])
+    message = user.POLERIZE(iObj)
+    TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+    print("[%s_APP-View-polerize] Results : %s" % (TS, message))  
     return jsonify(message)
 
 @app.route("/from_HSS", methods=["GET", "POST"])
