@@ -515,7 +515,14 @@ class HANAModel():
                 'Eprofile'  : [],
                 'UCDP'      : [],
                 'VULCHILD'  : [],
-                'VULADULT'  : []
+                'VULADULT'  : [],
+                'POLERIZE'  : [],
+                'POLEATTR'  : [],
+                'POLENODE'  : [],
+                'CURRENT'  : [],
+                'POLERELS'  : [],
+                'FILES'     : [],
+                'MAPS'      : []                
                 }
         
         # Timestamp the process
