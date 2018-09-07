@@ -11,7 +11,7 @@
         data-sap-ui-libs="sap.m", "sap.suite.ui.microchart">
 </script>
 
-{% if session.utype in AUTH['POL'] %}
+{% if session.utype in AUTH['HSS'] %}
 <script id="vLaunchpad"  type="ui5/xmlview"   title=   "الذكاء الجماعي"
 ><mvc:View 
       controllerName="sap.m.sample.GenericKPITile.Page"
@@ -956,106 +956,7 @@
         </SplitApp>
         </mvc:View>
 </script>
-{% elif session.utype in AUTH['HSS'] %}
-<script id="vLaunchpad"  type="ui5/xmlview"   title="Vulnerable People Monitor"
-><mvc:View 
-      controllerName="sap.m.sample.GenericKPITile.Page"
-      xmlns="sap.m" 
-      xmlns:mvc="sap.ui.core.mvc" 
-      xmlns:mc="sap.suite.ui.microchart"
-      xmlns:f="sap.ui.layout.form"
-      xmlns:html="http://www.w3.org/1999/xhtml"
-      xmlns:tnt="sap.tnt">
-      
-      <tnt:ToolHeader>
-       <Image
-        src="{{ url_for('static', filename='saplogo.svg')}}"
-        width="80px"
-        >
-        </Image>
-        <tnt:ToolHeaderUtilitySeparator />
-                <ToolbarSpacer>
-                </ToolbarSpacer>
-                <Button text="{{ session.username }}" type="Transparent" press="onUserNamePress">
-                </Button>
-                <Button icon="sap-icon://log" press="onPressLogOut" type="Transparent">
-                </Button>
-      </tnt:ToolHeader>
-      
-                <f:SimpleForm id="HSSform"
-                        editable="true"
-                        layout="ResponsiveGridLayout"
-                        title="Vulnerable People Monitor"
-                        labelSpanXL="4"
-                        labelSpanL="4"
-                        labelSpanM="4"
-                        labelSpanS="12"
-                        adjustLabelSpan="false"
-                        emptySpanXL="1"
-                        emptySpanL="1"
-                        emptySpanM="1"
-                        emptySpanS="0"
-                        columnsXL="1"
-                        columnsL="1"
-                        columnsM="1"
-                        singleContainerFullSize="false" 
-                >
-                <f:content>
-                </f:content>
-                </f:SimpleForm>
-                
-                <GenericTile 
-                  class="sapUiTinyMarginBegin sapUiTinyMarginTop tileLayout" 
-                  header="Open Sources"
-                  subheader="OSINT" 
-                  press="Collect1">
-                    <TileContent>
-                    <ImageContent src="sap-icon://home-share" />
-                    </TileContent>
-                </GenericTile>
 
-                <GenericTile 
-                  class="sapUiTinyMarginBegin sapUiTinyMarginTop tileLayout"
-                  header="Internal Sources" 
-                  subheader="Files and systems" 
-                  press="Collect2">
-                    <TileContent>
-                        <ImageContent src="sap-icon://sap-box" />
-                    </TileContent>
-                </GenericTile>
-                
-                <!--Detect Text-->
-                <GenericTile class="sapUiTinyMarginBegin sapUiTinyMarginTop tileLayout" 
-                  header="Text Analytics" 
-                  subheader="Mining and extraction" 
-                  press="Detect1">
-                      <TileContent>
-                         <ImageContent src="sap-icon://e-learning" />
-                      </TileContent>
-                </GenericTile>
-                
-                <!--Analyze Entities Profiles-->
-                <GenericTile class="sapUiTinyMarginBegin sapUiTinyMarginTop tileLayout" 
-                  header="POLE" 
-                  subheader="Entity profiles" 
-                  press="Analyze1">
-                        <TileContent>
-                          <ImageContent src="sap-icon://puzzle" />
-                        </TileContent>
-                </GenericTile>
-                
-                <GenericTile class="sapUiTinyMarginBegin sapUiTinyMarginTop tileLayout" 
-                  header="Network" 
-                  subheader="Relation management" 
-                  press="Analyze2">
-                        <TileContent>
-                          <ImageContent src="sap-icon://overview-chart" />
-                        </TileContent>
-                </GenericTile>
-        
-
-    </mvc:View>
-</script>
 
 {% else %}
 <!--Launchpad View-->
@@ -2533,7 +2434,6 @@
                                 <content>
                                         <List>
                                                 <items>
-                                                        <StandardListItem title="Connections Discovery" type="Navigation" press="onPressNavToConDis"/>
                                                         <StandardListItem title="Persons"   type="Navigation" press="onPressNavToPersons"/>
                                                         <StandardListItem title="Objects"   type="Navigation" press="onPressNavToObjects"/>
                                                         <StandardListItem title="Locations" type="Navigation" press="onPressNavToLocations"/>
@@ -3405,7 +3305,7 @@
         xmlns:l="sap.ui.layout"
         xmlns:u="sap.ui.unified"
         xmlns:f="sap.ui.layout.form">
-        <SplitApp id="SplitAppDemo" initialDetail="SPFfile" initialMaster="master" orientationChange="onOrientationChange">
+        <SplitApp id="SplitAppDemo" initialDetail="POLERMap" initialMaster="master" orientationChange="onOrientationChange">
                 <detailPages>
                 <!--COLLECT FILE-->
                         <Page id="Ifile" title="Internal File Collection" class="sapUiStdPage" showNavButton="true"
@@ -3414,7 +3314,7 @@
                                         <f:SimpleForm id="FORMIFL"
                                                 editable="true"
                                                 layout="ResponsiveGridLayout"
-                                                title="Collection Options"
+                                                title="File Uploading Process"
                                                 labelSpanXL="4"
                                                 labelSpanL="4"
                                                 labelSpanM="4"
@@ -3430,7 +3330,27 @@
                                                 singleContainerFullSize="false" 
                                         >
                                         <f:content>
-                                                <Button id="IFLbutton" text="File Uploader" press="onPressFileUploader" type="Emphasized"/>
+                                        <HBox class="sapUiSmallMargin">
+                                                <VBox class="sapUiSmallMargin">
+                                                <Label width="200px" text="1. Upload File" />
+                                                <Button width="200px" text="Upload" press="onPressMapSingleFile" type="Emphasized"/>
+
+                                                <Label text="2. Check File" />
+                                                <Button width="200px" text="Analyze" press="onPressPOLERIZEStep1" type="Emphasized"/>
+
+                                                <Label text="3. Choose Map" />
+                                                <Select width="200px" id="POLERIZE-ExtractionType" >
+                                                        <items>
+                                                        </items>
+                                                </Select>
+                                                <Label text="4. POLERIZE" />
+                                                <Button width="200px" text="Process" press="onPressPOLERIZEStep6b" type="Emphasized"/>
+                                                </VBox>
+                                                <VBox class="sapUiSmallMargin">
+                                                <Text id="POLERIZE-FileName" text="File Summary:"/>
+                                                <Text id="POLERIZE-FileSummary"/>
+                                                </VBox>
+                                        </HBox>
                                         </f:content>
                                         </f:SimpleForm>
                                 </VBox>
@@ -3457,6 +3377,8 @@
                                                 singleContainerFullSize="false" 
                                         >
                                         <f:content>
+
+                                                
                                                 {% if session.utype in AUTH['POL'] or session.utype in AUTH['USE'] %}
                                                 <Label text="Crimes 2" />
                                                 <Select id="SOURCE_SPF_CRIMES2" >
@@ -3530,6 +3452,301 @@
                                         </f:SimpleForm>
                                 </VBox>
                         </Page> 
+                        <Page id="POLERMap" title="Data Source Mapping" class="sapUiStdPage" showNavButton="true"
+                                navButtonText="Back" navButtonPress="onPressNavToISINT">
+                                <VBox class="sapUiSmallMargin">
+                                        <f:SimpleForm id="MAPPINGFORM"
+                                                editable="true"
+                                                layout="ResponsiveGridLayout"
+                                                title="Mapping Menu"
+                                                labelSpanXL="4"
+                                                labelSpanL="4"
+                                                labelSpanM="4"
+                                                labelSpanS="12"
+                                                adjustLabelSpan="false"
+                                                emptySpanXL="1"
+                                                emptySpanL="1"
+                                                emptySpanM="1"
+                                                emptySpanS="0"
+                                                columnsXL="1"
+                                                columnsL="1"
+                                                columnsM="1"
+                                                singleContainerFullSize="false" 
+                                        >
+                                        <f:content>
+                                        <IconTabBar
+                                                headerMode="Inline"
+                                                upperCase="false"
+                                                class="sapUiResponsiveContentPadding">
+                                        <items>
+                                                <IconTabFilter
+                                                        text="1.Get file"
+                                                        icon="sap-icon://add-document">
+                                                        <Text text="Upload a data file containing master and transactional data. The tables should have keys common
+                                                        to the various entities you want to create. For example, a person should have a reference in the master data
+                                                        that matches a key in the transactional table. The headers from the file will be rendered below. In the next
+                                                        step you will build the POLE entities from the table."/>
+                                                        <Button width="12rem" text="Upload File" type="Accept" press="onPressMapSingleFile"></Button>
+                                                        <Button width="12rem" text="Scan File" type="Accept" press="onPressPOLERIZEStep1"></Button>
+                                                        <VBox class="sapUiSmallMargin">
+                                                                <Table id="POLERIZE-AttributeTable" inset="false">
+                                                                <headerToolbar>
+                                                                        <Toolbar>
+                                                                                <content>
+                                                                                        <Title text="Data Source Attributes" level="H2"/>
+                                                                                </content>
+                                                                        </Toolbar>
+                                                                </headerToolbar>
+                                                                <columns>
+                                                                        <Column width="15%">
+                                                                                <Text text="Source"/>
+                                                                        </Column>
+                                                                        <Column width="25%">
+                                                                                <Text text="Attribute"/>
+                                                                        </Column>
+                                                                        <Column>
+                                                                                <Text text="Sample"/>
+                                                                        </Column>
+                                                                </columns>
+                                                                <items>
+                                                                        <ColumnListItem>
+                                                                                <cells>
+                                                                                </cells>
+                                                                        </ColumnListItem>
+                                                                </items>
+                                                                </Table>   
+                                                        </VBox>
+                                                </IconTabFilter>
+                                                <IconTabFilter
+                                                        text="2.Set POLE"
+                                                        icon="sap-icon://provision">
+                                                        <Text text="Create Persons, Objects, Locations, and Events that represent the meta data of the file you uploaded.
+                                                        You will use the source file's columns as attributes and assign them to POLE entities next in step 3. If you have
+                                                        multiple Objects or any other type of entity, name them like ReferenceForm and ContactForm to keep track of them when
+                                                        you build relationships among them in step 4."/>
+                                                        <HBox class="sapUiSmallMargin">
+                                                                <VBox class="sapUiSmallMargin">
+                                                                <Label text="Entity type" />
+                                                                <Select id="POLERIZE-EntityType" >
+                                                                        <items>
+                                                                                <core:Item text="Person"   key="Person"/>
+                                                                                <core:Item text="Object"   key="Object"/>
+                                                                                <core:Item text="Location" key="Location"/>
+                                                                                <core:Item text="Event"    key="Event"/>
+                                                                        </items>
+                                                                </Select>
+                                                                </VBox>
+                                                                <VBox class="sapUiSmallMargin">
+                                                                        <Label text="Entity Name" />
+                                                                        <Input                                                              
+                                                                                id="POLERIZE-EntityName"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+                                                                </VBox>
+                                                        </HBox>
+                                                        <Button width="12rem" text="Create Entity" type="Accept" press="onPressPOLERIZEStep2"></Button>
+                                                        <Table id="POLERIZE-EntityTable" inset="false">
+                                                                <headerToolbar>
+                                                                        <Toolbar>
+                                                                                <content>
+                                                                                        <Title text="Meta Entities" level="H2"/>
+                                                                                </content>
+                                                                        </Toolbar>
+                                                                </headerToolbar>
+                                                                <columns>
+                                                                        <Column width="10%">
+                                                                                <Text text="Type"/>
+                                                                        </Column>
+                                                                        <Column width="15%">
+                                                                                <Text text="Name"/>
+                                                                        </Column>
+                                                                        <Column>
+                                                                                <Text text="Attributes"/>
+                                                                        </Column>
+                                                                </columns>
+                                                                <items>
+                                                                        <ColumnListItem>
+                                                                                <cells>
+                                                                                </cells>
+                                                                        </ColumnListItem>
+                                                                </items>
+                                                                </Table>   
+                                                </IconTabFilter>
+                                                <IconTabFilter
+                                                        text="3.Attributes"
+                                                        icon="sap-icon://tags">
+                                                        <Text text="Assign attributes from Step 1 to each of the POLE entities created in step 2. This is where you can assign
+                                                        calculations based on multiple column values in any given row. For example, if a transactional file contains classification
+                                                        codes representing an entity's state, a rule based calculation could be assigned as an entity's attribute extracted from the row."/>
+                                                        <HBox class="sapUiSmallMargin">
+                                                                <VBox class="sapUiSmallMargin">
+                                                                        <Label text="Select Entity" />
+                                                                        <Select id="POLERIZE-Entity" >
+                                                                                <items>
+                                                                                </items>
+                                                                        </Select>
+                                                                </VBox>
+                                                                <VBox class="sapUiSmallMargin">
+                                                                        <Label text="Entity Attributes" />
+                                                                        <Select id="POLERIZE-EntityAttribute" >
+                                                                                <items>
+                                                                                </items>
+                                                                        </Select>
+                                                                </VBox>
+                                                                <VBox class="sapUiSmallMargin">
+                                                                        <Label text="Data Source Attributes" />
+                                                                        <Select id="POLERIZE-Attributes" >
+                                                                                <items>
+                                                                                </items>
+                                                                        </Select>
+                                                                </VBox>
+                                                                <VBox class="sapUiSmallMargin">
+                                                                        <Label text="Custom Value or Rule" />
+                                                                        <Input                                                              
+                                                                                id="POLERIZE-CustomAttribute"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+                                                                </VBox>
+                                                        </HBox>
+                                                        <Button width="12rem" text="Choose Entity" type="Accept" press="onPressLoadEntityAttributes"></Button>
+                                                        <Button width="12rem" text="Map Attribute" type="Accept" press="onPressPOLERIZEStep3"></Button>
+                                                        <Table id="POLERIZE-EntityTableProgress" inset="false">
+                                                                <headerToolbar>
+                                                                        <Toolbar>
+                                                                                <content>
+                                                                                        <Title text="Meta Entities" level="H2"/>
+                                                                                </content>
+                                                                        </Toolbar>
+                                                                </headerToolbar>
+                                                                <columns>
+                                                                        <Column width="10%">
+                                                                                <Text text="Type"/>
+                                                                        </Column>
+                                                                        <Column width="15%">
+                                                                                <Text text="Name"/>
+                                                                        </Column>
+                                                                        <Column>
+                                                                                <Text text="Attributes"/>
+                                                                        </Column>
+                                                                </columns>
+                                                                <items>
+                                                                        <ColumnListItem>
+                                                                                <cells>
+                                                                                </cells>
+                                                                        </ColumnListItem>
+                                                                </items>
+                                                                </Table>   
+                                                </IconTabFilter>
+                                                <IconTabFilter
+                                                        text="4.Relations"
+                                                        icon="sap-icon://overview-chart">
+                                                        <Text text="Create relationships between entities in the same row of a transactional file. For example, if a row contains a 
+                                                        date, location, and person reference then relationships such as OccurredAt, OccurredOn, and Involved could be assigned. Choose
+                                                        from existing sets or add new defintions."/>
+                                                        <HBox class="sapUiSmallMargin">
+                                                                <VBox class="sapUiSmallMargin">
+                                                                        <Label text="Source Entity" />
+                                                                        <Select id="POLERIZE-SourceEntity" >
+                                                                                <items>
+                                                                                </items>
+                                                                        </Select>
+                                                                </VBox>
+                                                                <VBox class="sapUiSmallMargin">
+                                                                        <Label text="Relationship Type" />
+                                                                        <Select id="POLERIZE-RelationshipType" >
+                                                                                <items>
+                                                                                </items>
+                                                                        </Select>
+                                                                </VBox>
+                                                                <VBox class="sapUiSmallMargin">
+                                                                        <Label text="Custom Relationship Type" />
+                                                                        <Input                                                              
+                                                                                id="POLERIZE-CustomRelationshipType"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+                                                                </VBox>
+                                                                <VBox class="sapUiSmallMargin">
+                                                                        <Label text="Target Entity" />
+                                                                        <Select id="POLERIZE-TargetEntity" >
+                                                                                <items>
+                                                                                </items>
+                                                                        </Select>
+                                                                </VBox>
+                                                        </HBox>
+                                                        <Button width="12rem" text="Map Relationship" type="Accept" press="onPressPOLERIZEStep4"></Button>
+                                                
+                                                        <Table id="POLERIZE-MetaRelations" inset="false">
+                                                                <headerToolbar>
+                                                                        <Toolbar>
+                                                                                <content>
+                                                                                        <Title text="Meta Relations" level="H2"/>
+                                                                                </content>
+                                                                        </Toolbar>
+                                                                </headerToolbar>
+                                                                <columns>
+                                                                        <Column width="10%">
+                                                                                <Text text="Source"/>
+                                                                        </Column>
+                                                                        <Column width="15%">
+                                                                                <Text text="Target"/>
+                                                                        </Column>
+                                                                        <Column>
+                                                                                <Text text="Type"/>
+                                                                        </Column>
+                                                                </columns>
+                                                                <items>
+                                                                        <ColumnListItem>
+                                                                                <cells>
+                                                                                </cells>
+                                                                        </ColumnListItem>
+                                                                </items>
+                                                                </Table>  
+                                                </IconTabFilter>
+                                                <IconTabFilter
+                                                        text="5.Create Map"
+                                                        icon="sap-icon://map-3">
+                                                        <Text text="Save the map to the application for immediate use on the source file and create the rule for future files by naming
+                                                        convention. For example, if this is Social Services contact center file from organization 1 of 10 centers, it should be called, SocialServicesCenter1.
+                                                        Subsequent files from this center would be extracted using this map."/>
+                                                        <Label text="Enter Map Name" />
+                                                                <Input                                                              
+                                                                        id="POLERIZE-MapName"
+                                                                        class="sapUiSmallMarginBottom"
+                                                                        >
+                                                                </Input>
+                                                        <Button width="12rem" text="Create Map" type="Accept" press="onPressPOLERIZEStep5"></Button>
+                                                </IconTabFilter>
+                                                <IconTabFilter
+                                                        text="POLERIZE"
+                                                        icon="sap-icon://process">
+                                                        <Text text="Choose a staged file and apply a POLE map to run extraction."/>
+                                                        <HBox class="sapUiSmallMargin">
+                                                                <VBox class="sapUiSmallMargin">
+                                                                <Label text="Available Files" />
+                                                                <Select id="POLERIZE-Files" >
+                                                                        <items>
+                                                                        </items>
+                                                                </Select>
+                                                                </VBox>
+                                                                <VBox class="sapUiSmallMargin">
+                                                                <Label text="POLER Maps" />
+                                                                <Select id="POLERIZE-Maps" >
+                                                                        <items>
+                                                                        </items>
+                                                                </Select>
+                                                                </VBox>
+                                                        </HBox>
+                                                        <Button width="12rem" text="Run Process" type="Accept" press="onPressPOLERIZEStep6"></Button>
+                                                </IconTabFilter>
+                                        </items>
+                                        </IconTabBar>
+                                        </f:content>
+                                        </f:SimpleForm>
+                                </VBox>
+                        </Page> 
                 </detailPages>
                 <!---MAIN MENU OF OPTIONS-->
                 <masterPages>
@@ -3538,8 +3755,8 @@
                                 <content>
                                         <List>
                                                 <items>
-                                                        <StandardListItem title="File Processor"    type="Navigation" press="onPressETLSingleFile"/>
-                                                        <StandardListItem title="Mapped Systems"    type="Navigation" press="onPressNavToSPFfile"/>
+                                                        <StandardListItem title="Map Source"   type="Navigation" press="onPressNavToMapDataSource"/>
+                                                        <StandardListItem title="Load Files"   type="Navigation" press="onPressNavToIfile"/>
                                                 </items>
                                         </List>
                                 </content>
@@ -4870,15 +5087,16 @@
                                                                                 <items>
                                                                                         <core:Item text="Twitter"        key="twitter"/>
                                                                                         <core:Item text="YouTube"        key="youtube"/>
+                                                                                        <core:Item text="Facebook"       key="facebook"/>
                                                                                 </items>
                                                                         </Select>
-                                                                        <Label text="Client key" />
+                                                                        <Label text="Client key or Email" />
                                                                         <Input                                                              
                                                                                 id="UserClientKey"
                                                                                 class="sapUiSmallMarginBottom"
                                                                                 >
                                                                         </Input>
-                                                                        <Label text="Client secret" />
+                                                                        <Label text="Client secret or Password" />
                                                                         <Input                                                              
                                                                                 id="UserClientSecret"
                                                                                 class="sapUiSmallMarginBottom"
@@ -4897,69 +5115,6 @@
                                                                                 >
                                                                         </Input>
                                                                         <Button id="UpdateUserTokens" text="Add Tokens" press="onPressUpdateUserTokens" type="Emphasized"/>
-                                                                </f:content>
-                                                                </f:SimpleForm>
-                                                        </VBox>           
-                                        </IconTabFilter>
-                                        <IconTabFilter
-                                                text="Add HANA System"
-                                                icon="sap-icon://key">
-                                                        <VBox class="sapUiSmallMargin">
-                                                                <f:SimpleForm id="USERSYSTEMS"
-                                                                        editable="true"
-                                                                        layout="ResponsiveGridLayout"
-                                                                        labelSpanXL="4"
-                                                                        labelSpanL="4"
-                                                                        labelSpanM="4"
-                                                                        labelSpanS="12"
-                                                                        adjustLabelSpan="false"
-                                                                        emptySpanXL="1"
-                                                                        emptySpanL="1"
-                                                                        emptySpanM="1"
-                                                                        emptySpanS="0"
-                                                                        columnsXL="1"
-                                                                        columnsL="1"
-                                                                        columnsM="1"
-                                                                        singleContainerFullSize="false" 
-                                                                >
-                                                                <f:content>
-                                                                        <Label text="Host info" />
-                                                                        <Input                                                              
-                                                                                id="SYShost"
-                                                                                class="sapUiSmallMarginBottom"
-                                                                                >
-
-                                                                        <Label text="Port" />
-                                                                        <Input                                                              
-                                                                                id="SYSport"
-                                                                                class="sapUiSmallMarginBottom"
-                                                                                >
-                                                                        </Input>
-                                                                        <Label text="System User" />
-                                                                        <Input                                                              
-                                                                                id="SYSuser"
-                                                                                class="sapUiSmallMarginBottom"
-                                                                                >
-                                                                        </Input>
-                                                                        <Label text="System pass" />
-                                                                        <Input                                                              
-                                                                                id="SYSpassword"
-                                                                                class="sapUiSmallMarginBottom"
-                                                                                >
-                                                                        </Input>
-                                                                        <Label text="ConDis user" />
-                                                                        <Input                                                              
-                                                                                id="userCondis"
-                                                                                class="sapUiSmallMarginBottom"
-                                                                                >
-                                                                        </Input>
-                                                                        <Label text="ConDis pass" />
-                                                                        <Input                                                              
-                                                                                id="pswdCondis"
-                                                                                class="sapUiSmallMarginBottom"
-                                                                                >
-                                                                        </Input>
-                                                                        <Button text="Add System" press="onPressUpdateUserSystem" type="Emphasized"/>
                                                                 </f:content>
                                                                 </f:SimpleForm>
                                                         </VBox>           
@@ -5470,9 +5625,8 @@
                         },
                         
                         onPressNavToConDis : function(oEvent) {
-                                //window.open("https://cldvmxli00466.wdf.sap.corp:51006");
-                                window.open("https://lt5111.wdf.sap.corp:51034/condis/index.html");
-                                //window.open("https://sghana27.sin.sap.corp:51050/condis/index.html");
+
+                                window.open("https://sghana27.sin.sap.corp:51050/condis/index.html");
                         
                         },
                         
@@ -6515,8 +6669,47 @@
                         
                         //-----COLLECT FILE APP CONTROLS------///
                         onPressNavToIfile: function(oEvent) {
+                                var oThis = this;
                                 this.getSplitAppObj().to(this.createId("Ifile"));
                                 MessageToast.show("Transform internal files into a P-O-L-E format for graph exploration.");
+                                var menuModel = sap.ui.getCore().getModel("MENUS");
+                                var oData = {"step" : 0};
+                                
+                                jQuery.ajax({
+                                        type : "POST",
+                                        data : JSON.stringify(oData),
+                                        url : "/polerize",
+                                        async : true,
+                                        success: function(data, textStatus, jqXHR) {
+                                                sap.ui.getCore().getModel("MENUS").setProperty("/FILES", data['files']);
+                                                sap.ui.getCore().getModel("MENUS").setProperty("/MAPS", data['maps']);
+                                                sap.ui.getCore().getModel("MENUS").refresh();
+                                                
+                                        }
+                                
+                                });
+                                
+                                var oFileList = new sap.ui.core.Item({
+                                        key: "{TYPE}",
+                                        text: "{TYPE}"
+                                });
+                                var FileList  = oThis.byId("POLERIZE-Files");
+                                FileList.setModel(menuModel);
+                                FileList.bindAggregation("items", "/FILES/", oFileList); 
+                                
+                                
+                                var oMapList = new sap.ui.core.Item({
+                                        key: "{TYPE}",
+                                        text: "{TYPE}"
+                                });
+                                var MapList  = oThis.byId("POLERIZE-Maps");
+                                MapList.setModel(menuModel);
+                                MapList.bindAggregation("items", "/MAPS/", oMapList); 
+                                
+                                var MapList2  = oThis.byId("POLERIZE-ExtractionType");
+                                MapList2.setModel(menuModel);
+                                MapList2.bindAggregation("items", "/MAPS/", oMapList); 
+
                         },
                         onPressNavToSPFfile: function(oEvent) {
                                 this.getSplitAppObj().to(this.createId("SPFfile"));
@@ -8206,6 +8399,397 @@
                         
                         },
                         
+                        onPressMapSingleFile : function() {
+                                MessageToast.show("Opening file uploader for mapping.");
+                                var win = window.open("/map_file", "MsgWindow","width=500, height=300");
+
+                        },
+                        
+                        onPressLoadEntityAttributes : function() {
+                                MessageToast.show("Loading entity attributes.");
+                                var oThis = this;
+                                var menuModel = sap.ui.getCore().getModel("MENUS");
+                                
+                                var step = {}
+                                step['step'] = 3
+                                step['entity'] = this.byId("POLERIZE-Entity").getSelectedItem().getKey();
+                                var entities = sap.ui.getCore().getModel("MENUS").getProperty("/POLENODE");
+                                var attributes = [];
+                                
+                                for(var e in entities){
+                                        if(entities[e]['LABEL'] == step['entity']){
+                                                for(var a in entities[e]['Attributes']){
+                                                        var att = {'TYPE' : entities[e]['Attributes'][a]};
+                                                        attributes.push(att);
+                                                }
+                                        };
+                                }
+                                
+                                var oAttributeList = new sap.ui.core.Item({
+                                        key: "{TYPE}",
+                                        text: "{TYPE}"
+                                });
+                                
+                                sap.ui.getCore().getModel("MENUS").setProperty("/CURRENT", attributes);
+                                sap.ui.getCore().getModel("MENUS").refresh();               
+                                var AttributeList = oThis.byId("POLERIZE-EntityAttribute");
+                                AttributeList.setModel(menuModel);
+                                AttributeList.bindAggregation("items", "/CURRENT", oAttributeList);
+                                
+                        },
+                        
+                        onPressPOLERIZEStep1 : function() {
+                                
+                                var oThis = this;
+                                var menuModel = sap.ui.getCore().getModel("MENUS");
+                                MessageToast.show('Analyzing files in staging area...');
+                                
+                                var oRelList = new sap.ui.core.Item({
+                                        key: "{TYPE}",
+                                        text: "{TYPE}"
+                                });
+                                var RelList = oThis.byId("POLERIZE-RelationshipType");
+                                RelList.setModel(menuModel);
+                                RelList.bindAggregation("items", "/RELS/", oRelList); 
+                                
+                                var step = {'step' : 1}
+                                var uploader = jQuery.ajax({
+                                        type : "POST",
+                                        url : "/polerize",
+                                        async : true,
+                                        data : step,
+                                        success: function(data, textStatus, jqXHR) {
+                                                sap.ui.getCore().getModel("MENUS").setProperty("/POLERIZE/", data);
+                                                sap.ui.getCore().getModel("MENUS").setProperty("/POLEATTR/", data['cols']);
+                                                sap.ui.getCore().getModel("MENUS").refresh();
+                                                MessageToast.show('Found ' + data['count'] + ' attributes\nMoving files to extraction');
+                                                
+                                                var oAttributeTable = new sap.m.ColumnListItem({
+                                                        cells: [
+                                                                new sap.m.Text({text : "{dsource}"}),
+                                                                new sap.m.Text({text : "{attribute}"}),
+                                                                new sap.m.Text({text : "{sample}"})
+                                                        ]
+                                                
+                                                });
+                                                var AttributeTable = oThis.byId("POLERIZE-AttributeTable");
+                                                AttributeTable.setModel(menuModel);
+                                                AttributeTable.bindAggregation("items", "/POLEATTR/", oAttributeTable);
+                                                
+                                                var oAttributeList = new sap.ui.core.Item({
+                                                        key: "{attribute}",
+                                                        text: "{attribute}"
+                                                });
+                                                
+                                                var AttributeList = oThis.byId("POLERIZE-Attributes");
+                                                AttributeList.setModel(menuModel);
+                                                AttributeList.bindAggregation("items", "/POLEATTR/", oAttributeList);
+                                                
+                                                var oFileSummary = new sap.m.Text({
+                                                        text: "{summary}"
+                                                });
+                                                var FileSummary = oThis.byId('POLERIZE-FileSummary');
+                                                FileSummary.setModel(menuModel);
+                                                FileSummary.bindText("/POLERIZE/summary", oFileSummary);
+                                                
+                                                var oFileName = new sap.m.Text({
+                                                        text: "{file}"
+                                                });
+                                                var FileName = oThis.byId('POLERIZE-FileName');
+                                                FileName.setModel(menuModel);
+                                                FileName.bindText("/POLERIZE/file", oFileName);
+                                        }
+                                
+                                });
+                                
+
+                        },
+                        
+                        onPressPOLERIZEStep2 : function() {
+                                
+                                var oThis = this;
+                                var menuModel = sap.ui.getCore().getModel("MENUS");
+                                MessageToast.show('Creating entity');
+                                var step = {'step' : 2}
+                                step['entity'] = this.byId("POLERIZE-EntityType").getSelectedItem().getKey();
+                                step['name'] = this.byId("POLERIZE-EntityName").getValue();
+                                var entity = jQuery.ajax({
+                                        type : "POST",
+                                        url : "/polerize",
+                                        async : true,
+                                        data : step,
+                                        success: function(data, textStatus, jqXHR) {
+                                                sap.ui.getCore().getModel("MENUS").getProperty("/POLENODE").push(data);
+                                                MessageToast.show('Entity Added');
+                                                
+                                                var Nodes = sap.ui.getCore().getModel("MENUS").getProperty("/POLENODE");
+                                                for(var n in Nodes){
+                                                        Nodes[n]['atts'] = '';
+                                                        for(var a in Nodes[n]){
+                                                                if(a != 'TYPE' && a != 'LABEL' && a != 'Attributes' && a != 'atts'){
+                                                                        Nodes[n]['atts'] = Nodes[n]['atts'] + a + ': ' + Nodes[n][a] + ', ';
+                                                                }
+                                                        }
+                                                };
+                                                
+                                                sap.ui.getCore().getModel("MENUS").refresh();
+                                                var oEntityTable = new sap.m.ColumnListItem({
+                                                        cells: [
+                                                                new sap.m.Text({text : "{TYPE}"}),
+                                                                new sap.m.Text({text : "{LABEL}"}),
+                                                                new sap.m.Text({text : "{atts}"})
+                                                        ]
+                                                
+                                                });
+                                                
+                                                var EntityTable = oThis.byId("POLERIZE-EntityTable");
+                                                EntityTable.setModel(menuModel);
+                                                EntityTable.bindAggregation("items", "/POLENODE/", oEntityTable);
+                                                
+                                                var oEntityList = new sap.ui.core.Item({
+                                                        key: "{LABEL}",
+                                                        text: "{LABEL}"
+                                                });
+                                                
+                                                var EntityList = oThis.byId("POLERIZE-Entity");
+                                                var SourceList = oThis.byId("POLERIZE-SourceEntity");
+                                                var TargetList = oThis.byId("POLERIZE-TargetEntity");
+                                                EntityList.setModel(menuModel);
+                                                SourceList.setModel(menuModel);
+                                                TargetList.setModel(menuModel);
+                                                EntityList.bindAggregation("items", "/POLENODE/", oEntityList);
+                                                SourceList.bindAggregation("items", "/POLENODE/", oEntityList);
+                                                TargetList.bindAggregation("items", "/POLENODE/", oEntityList); 
+                                                
+                                        }
+                                });
+                                
+
+                        },
+                        
+                        onPressPOLERIZEStep3 : function() {
+                                
+                                var EntAtt = {};
+                                var oThis = this;
+                                var menuModel = sap.ui.getCore().getModel("MENUS");
+                                EntAtt['Entity'] = oThis.byId("POLERIZE-Entity").getSelectedItem().getKey();
+                                EntAtt['Attribute'] = oThis.byId("POLERIZE-EntityAttribute").getSelectedItem().getKey();
+                                EntAtt['DataSource'] = oThis.byId("POLERIZE-Attributes").getSelectedItem().getKey();
+                                EntAtt['Custom'] = oThis.byId("POLERIZE-CustomAttribute").getValue();
+                                EntAtt['step'] = 3;
+                                console.log(EntAtt);
+                                
+                                //Save the Nodes to a variable and then use it to re-write the model
+                                var Nodes = sap.ui.getCore().getModel("MENUS").getProperty("/POLENODE");
+                                for(var n in Nodes){
+                                        //Use the Name from the menu to match against existing Nodes
+                                        if(Nodes[n]['LABEL'] == EntAtt['Entity']){
+                                                //Check between the Custom Value and the Data Source attributes
+                                                if(EntAtt['Custom'] != ''){
+                                                        Nodes[n][EntAtt['Attribute']] = EntAtt['Custom'];
+                                                }
+                                                else{
+                                                        Nodes[n][EntAtt['Attribute']] = EntAtt['DataSource'];
+                                                }
+                                                console.log(Nodes[n]);
+                                        }
+                                
+                                }
+                                sap.ui.getCore().getModel("MENUS").refresh();
+                                // Update the view on Nodes' attributes
+                                for(var n in Nodes){
+                                        Nodes[n]['atts'] = '';
+                                        for(var a in Nodes[n]){
+                                                if(a != 'TYPE' && a != 'LABEL' && a != 'Attributes' && a != 'atts'){
+                                                        Nodes[n]['atts'] = Nodes[n]['atts'] + a + ': ' + Nodes[n][a] + '\n';
+                                                }
+                                        }
+                                };
+                                
+                                var oEntityTable = new sap.m.ColumnListItem({
+                                        cells: [
+                                                new sap.m.Text({text : "{TYPE}"}),
+                                                new sap.m.Text({text : "{LABEL}"}),
+                                                new sap.m.Text({text : "{atts}"})
+                                        ]
+                                
+                                });
+                                sap.ui.getCore().getModel("MENUS").refresh();
+                                var EntityTable = oThis.byId("POLERIZE-EntityTableProgress");
+                                EntityTable.setModel(menuModel);
+                                EntityTable.bindAggregation("items", "/POLENODE/", oEntityTable);
+                                
+                                sap.ui.getCore().getModel("MENUS").setProperty("/POLENODE", Nodes);
+                                
+
+                        },
+                        
+                        onPressPOLERIZEStep4 : function() {
+                                MessageToast.show("Creating relationship.");
+                                var oThis = this;
+                                var menuModel = sap.ui.getCore().getModel("MENUS");
+                                var Rel = {};
+                                
+                                Rel['S_LABEL'] = oThis.byId("POLERIZE-SourceEntity").getSelectedItem().getKey();
+                                Rel['R_TYPE'] = oThis.byId("POLERIZE-RelationshipType").getSelectedItem().getKey();
+                                Rel['CUSTOM'] = oThis.byId("POLERIZE-CustomRelationshipType").getValue();
+                                Rel['T_LABEL'] = oThis.byId("POLERIZE-TargetEntity").getSelectedItem().getKey();
+                                
+                                if(Rel['CUSTOM'] != ''){
+                                        Rel['R_TYPE'] = Rel['CUSTOM'];
+                                }
+                                
+                                sap.ui.getCore().getModel("MENUS").getProperty("/POLERELS").push(Rel);
+                                sap.ui.getCore().getModel("MENUS").refresh();
+                                
+                                var oRelationTable = new sap.m.ColumnListItem({
+                                        cells: [
+                                                new sap.m.Text({text : "{S_LABEL}"}),
+                                                new sap.m.Text({text : "{T_LABEL}"}),
+                                                new sap.m.Text({text : "{R_TYPE}"})
+                                        ]
+                                
+                                });
+                                
+                                var RelationTable = oThis.byId("POLERIZE-MetaRelations");
+                                RelationTable.setModel(menuModel);
+                                RelationTable.bindAggregation("items", "/POLERELS/", oRelationTable);
+
+                        },
+                        
+                        onPressPOLERIZEStep5 : function() {
+                                
+                                var oThis = this;
+                                var Map = {"relations" : [], "entities" : [], "step" : 5};
+                                var Links = sap.ui.getCore().getModel("MENUS").getProperty("/POLERELS");
+                                var Nodes = sap.ui.getCore().getModel("MENUS").getProperty("/POLENODE");
+                                Map['mapname'] = oThis.byId("POLERIZE-MapName").getValue();
+                                
+                                for(var n in Nodes){
+                                        var N = {};
+                                        for(var a in Nodes[n]){
+                                                if(a != 'Attributes' && a != 'atts'){
+                                                        N[a] = Nodes[n][a];
+                                                }
+                                        }
+                                        Map['entities'].push(N);
+                                }
+                                for(var l in Links){
+                                        var L = {};
+                                        for(var a in Links[l]){
+                                                if(a != 'CUSTOM'){
+                                                        L[a] = Links[l][a];
+                                                }
+                                        }
+                                        Map['relations'].push(L);
+                                }
+
+                                jQuery.ajax({
+                                        type : "POST",
+                                        url : "/polerize",
+                                        async : true,
+                                        data : JSON.stringify(Map),
+                                        success: function(data, textStatus, jqXHR) {
+                                                MessageToast.show("Rule saved for future extractions");
+                                        }
+                                });
+
+                        },
+                        
+                        onPressPOLERIZEStep6 : function() {
+                                var Process = {};
+                                var oThis = this;
+                                Process['file'] = oThis.byId("POLERIZE-Files").getSelectedItem().getKey();
+                                Process['map'] = oThis.byId("POLERIZE-Maps").getSelectedItem().getKey();
+                                Process['step'] = 6;
+                                jQuery.ajax({
+                                        type : "POST",
+                                        data : JSON.stringify(Process),
+                                        url : "/polerize",
+                                        async : true,
+                                        success: function(data, textStatus, jqXHR) {
+                                                MessageToast.show("Running extraction...");
+                                                
+                                        }
+                                
+                                });
+                                
+                        
+                        },
+                        
+                        onPressPOLERIZEStep6b : function() {
+                                var Process = {};
+                                var oThis = this;
+                                Process['file'] = oThis.byId("POLERIZE-FileName").getText();
+                                Process['map'] = oThis.byId("POLERIZE-ExtractionType").getSelectedItem().getKey();
+                                Process['step'] = 6;
+                                jQuery.ajax({
+                                        type : "POST",
+                                        data : JSON.stringify(Process),
+                                        url : "/polerize",
+                                        async : true,
+                                        success: function(data, textStatus, jqXHR) {
+                                                MessageToast.show("Running extraction...");
+                                                
+                                        }
+                                
+                                });
+                                
+                        
+                        },
+                        
+                        onPressNavToMapDataSource : function() {
+                                var oThis = this;
+                                this.getSplitAppObj().to(this.createId("POLERMap"));
+                                MessageToast.show("Create POLER maps for new data sources.");
+                                var menuModel = sap.ui.getCore().getModel("MENUS");
+                                var oRelList = new sap.ui.core.Item({
+                                        key: "{TYPE}",
+                                        text: "{TYPE}"
+                                });
+                                var RelList = oThis.byId("POLERIZE-RelationshipType");
+                                RelList.setModel(menuModel);
+                                RelList.bindAggregation("items", "/RELS/", oRelList); 
+                                var oData = {"step" : 0};
+                                
+                                jQuery.ajax({
+                                        type : "POST",
+                                        data : JSON.stringify(oData),
+                                        url : "/polerize",
+                                        async : true,
+                                        success: function(data, textStatus, jqXHR) {
+                                                sap.ui.getCore().getModel("MENUS").setProperty("/FILES", data['files']);
+                                                sap.ui.getCore().getModel("MENUS").setProperty("/MAPS", data['maps']);
+                                                sap.ui.getCore().getModel("MENUS").refresh();
+                                                
+                                        }
+                                
+                                });
+                                
+                                var oFileList = new sap.ui.core.Item({
+                                        key: "{TYPE}",
+                                        text: "{TYPE}"
+                                });
+                                var FileList  = oThis.byId("POLERIZE-Files");
+                                FileList.setModel(menuModel);
+                                FileList.bindAggregation("items", "/FILES/", oFileList); 
+                                
+                                
+                                var oMapList = new sap.ui.core.Item({
+                                        key: "{TYPE}",
+                                        text: "{TYPE}"
+                                });
+                                var MapList  = oThis.byId("POLERIZE-Maps");
+                                MapList.setModel(menuModel);
+                                MapList.bindAggregation("items", "/MAPS/", oMapList); 
+                                
+                                var MapList2  = oThis.byId("POLERIZE-ExtractionType");
+                                MapList2.setModel(menuModel);
+                                MapList2.bindAggregation("items", "/MAPS/", oMapList); 
+
+                        
+                        },
+                        
                         onPressProcessPhotos : function() {
                                 MessageToast.show("Processing photos from uploading.");
                                 var aData = jQuery.ajax({
@@ -8247,37 +8831,13 @@
                                 UPDATE['client_key']  = this.byId("UserClientKey").getValue();
                                 UPDATE['client_secret'] = this.byId("UserClientSecret").getValue();
                                 UPDATE['token']   = this.byId("UserToken").getValue();
-                                UPDATE['token_secret']  = this.byId("UserTokenSecret").getValue();
+                                UPDATE['token_secret']  = this.byId("UserTokenSecret").getValue()
                                 UPDATE['TokenType']  = this.byId("UserTokenType").getSelectedItem().getKey();
                                 
                                 var oModel = new sap.ui.model.json.JSONModel();
                                 var aData = jQuery.ajax({
                                         type : "POST",
                                         url : "/user_tokens",
-                                        dataType : "json",
-                                        async : false,
-                                        data : UPDATE,
-                                        success : function(data,textStatus, jqXHR) {
-                                            oModel.setData({modelData : data}); 
-                                            MessageToast.show("Update Success");
-                                        }
-                                });
-                        },
-                        
-                        onPressUpdateUserSystem : function() {
-                        
-                                var UPDATE = {}
-                               
-                                UPDATE['host']  = this.byId("SYShost").getValue();
-                                UPDATE['port'] = this.byId("SYSport").getValue();
-                                UPDATE['user']   = this.byId("SYSuser").getValue();
-                                UPDATE['password']  = this.byId("SYSpassword").getValue();
-                                UPDATE['userCondis']  = this.byId("userCondis").getValue();
-                                UPDATE['pswdCondis']  = this.byId("pswdCondis").getValue();
-                                var oModel = new sap.ui.model.json.JSONModel();
-                                var aData = jQuery.ajax({
-                                        type : "POST",
-                                        url : "/user_systems",
                                         dataType : "json",
                                         async : false,
                                         data : UPDATE,
