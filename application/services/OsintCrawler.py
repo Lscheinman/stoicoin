@@ -115,9 +115,11 @@ class Crawler():
         for l in links:
             Link = {'text' : l.text, 'link' : l.get_attribute('href')}
             if Link['text'].count(' ') > 2 and Link['link'] not in self.data['links'] and Link['link'] != None:
-                if 'weather' not in Link['link']:
+                if Link['text'] != 'Art, Graphics & Video':
                     self.data['links'].append(Link)
+                print("!!LINK: %s" % Link)
         self.linkcount = len(self.data['links'])
+        print(self.linkcount)
     
     def getSearch(self):
         
@@ -237,22 +239,30 @@ class Crawler():
                             texts = self.ActiveDriver.find_elements_by_id('DynamicContentContainer')
                         if len(texts) == 0:
                             texts = self.ActiveDriver.find_elements_by_tag_name('span')                        
+                    
+                    elif 'nairaland.com' in self.startURL:
+                        e['user'] = self.ActiveDriver.find_element_by_class_name('user').text
+                        e['date']  = self.ActiveDriver.find_element_by_class_name('s').text
+                        e['fulltext'] = self.ActiveDriver.find_element_by_class_name('narrow').text.replace('\n', ' ').replace("'", '').replace('"', '')  
+                        print(e)
                     else:
                         texts = self.ActiveDriver.find_elements_by_class_name('selectionShareable')
-                    try:
-                        paras = BeautifulSoup(requests.get(self.ActiveDriver.current_url).content, 'lxml').findAll('p')
-                    except:
-                        paras = texts
-                    story = texts[0].text
-                    i+=1
-                    for t in paras:
-                        if t.text not in story:
-                            story = story + ' ' + t.text
-                            if '.2018' in t.text and i < 5:
-                                dtg = t.text.find('2018')
-                                e['date'] = t.text[dtg-6:dtg+5]
+                    
+                    if 'nairaland.com' not in self.startURL:
+                        try:
+                            paras = BeautifulSoup(requests.get(self.ActiveDriver.current_url).content, 'lxml').findAll('p')
+                        except:
+                            paras = texts
+                        story = texts[0].text
                         i+=1
-                    e['fulltext'] = story.replace('\n', ' ').replace("'", '').replace('"', '')                  
+                        for t in paras:
+                            if t.text not in story:
+                                story = story + ' ' + t.text
+                                if '.2018' in t.text and i < 5:
+                                    dtg = t.text.find('2018')
+                                    e['date'] = t.text[dtg-6:dtg+5]
+                            i+=1
+                        e['fulltext'] = story.replace('\n', ' ').replace("'", '').replace('"', '')                  
                 except:
                     pass
 
@@ -266,7 +276,7 @@ class Crawler():
 # ''
 CRAWL = {}
 CRAWL['searchDepth'] = ['Single']
-CRAWL['startURL'] = ['http://www.aljazeera.net/portal']
+CRAWL['startURL'] = ['https://www.nairaland.com/']
 #CRAWL['startURL'] = ['https://www.aljazeera.com/']
 #CRAWL['searchTerms'] = ['محمد بن سلمان']
 CRAWL['searchTerms'] = ['']
@@ -283,7 +293,6 @@ CRAWL['showNavigation'] = ['true']
 
 #c.getLinks()
 #c.getSearch()
-#c.getLinks()
 #c.getGraphics()
 #c.getSecondDegree()
 #print(c.data)  
