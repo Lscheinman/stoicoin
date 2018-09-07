@@ -511,7 +511,9 @@ class OrientModel():
             fname = P_LNAME = "Unknown"
         P_DOB = str(self.check_date(P_DOB))[:10]
         if type(P_POB) == str:
-            P_POB = P_POB.replace("'", "").replace('"', '')
+            P_POB = P_POB.replace("'", "").replace('"', '') 
+        if P_GEN == None:
+            P_GEN = 'U'
 
         P_FNAME = (P_FNAME.replace("'", ""))[:60]
         P_LNAME = (P_LNAME.replace("'", ""))[:60]        
@@ -588,6 +590,22 @@ class OrientModel():
         
         if len(E_LOGSOURCE) > 199:
             E_LOGSOURCE = E_LOGSOURCE[:200]
+        
+        if ':' in E_DATE:
+            if 'pm' in E_DATE:
+                E_TIME = E_DATE[:E_DATE.find('p')][:4]
+                hh = int(E_TIME[:E_TIME.find(':')])
+                mm = int(E_TIME[E_TIME.find(':')+1:])
+                if hh > 12:
+                    hh = hh + 12
+                E_TIME = '%d:%d' % (hh, mm)
+                
+            elif 'am' in E_DATE:
+                E_TIME = E_DATE[:E_DATE.find('a')][:4]
+                hh = int(E_TIME[:E_TIME.find(':')])
+                mm = int(E_TIME[E_TIME.find(':')+1:])
+                E_TIME = '%d:%d' % (hh, mm)
+
         E_DATE = self.check_date(E_DATE)
         if ':' not in str(E_TIME):
             E_TIME = '12:00'
@@ -627,6 +645,7 @@ class OrientModel():
                     self.HDB.insertODBEvent(E_GUID, E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE)
                 except:
                     pass
+        print("!!!EVENT: %s %s %s" % (E_DATE, E_TIME, E_DESC))
         return E_GUID  
     
     def insertLocation(self, L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1, L_ORIGIN, L_ORIGINREF, L_LOGSOURCE):
@@ -1214,7 +1233,14 @@ class OrientModel():
                 'Eprofile'  : [],
                 'UCDP'      : [],
                 'VULCHILD'  : [],
-                'VULADULT'  : []
+                'VULADULT'  : [],
+                'POLERIZE'  : [],
+                'POLEATTR'  : [],
+                'POLENODE'  : [],
+                'CURRENT'  : [],
+                'POLERELS'  : [],
+                'FILES'     : [],
+                'MAPS'      : []
                 }
         
         # Timestamp the process
@@ -1342,15 +1368,8 @@ class OrientModel():
         menu['TASKS'] = sorted(menu['TASKS'], key=lambda i: i['DTG'], reverse=True)
         menu['Tprofile'].append(d)     
             
-        sql = ''' select @class from E '''
-        r = self.client.command(sql)
-        for e in r:
-            d = {}
-            e = e.oRecordData
-            d['RELTYP'] = e['class']
-            if d not in menu['RELS']:
-                menu['RELS'].append(d) 
-        menu['RELS'] = sorted(menu['RELS'], key=lambda i: i['RELTYP'].lower())      
+        for r in self.reltypes:
+            menu['RELS'].append({'TYPE' : r} )
         
         for k in menu.keys():
             try:
