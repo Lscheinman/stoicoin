@@ -1603,6 +1603,7 @@
         xmlns:custom="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1"
         controllerName="sap.m.sample.SplitApp.C"
         xmlns="sap.m"
+        xmlns:g="sap.suite.ui.commons.networkgraph"
         xmlns:l="sap.ui.layout"
         xmlns:f="sap.ui.layout.form"
         xmlns:viz="sap.viz.ui5.controls"
@@ -1611,6 +1612,8 @@
         xmlns:viz.data="sap.viz.ui5.data"
         xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds"
         xmlns:vbm="sap.ui.vbm"
+        xmlns:layout="sap.suite.ui.commons.networkgraph.layout"
+        xmlns:html="http://www.w3.org/1999/xhtml"
         xmlns:vk="sap.ui.vk">
         <SplitApp id="SplitAppDemo" initialDetail="d" initialMaster="master" orientationChange="onOrientationChange">
                 <detailPages>
@@ -1620,7 +1623,6 @@
                                 <VBox class="sapUiSmallMargin">
                                 <Text id="ProfileGUID" text="ID" />
                                 <Text id="ProfileDescription" text="Profile Description" />
-
                                 </VBox>
                                 <IconTabBar
                                         id="RelatedEntitiesIcons"
@@ -1842,11 +1844,41 @@
                                                                 </mc:AreaMicroChartItem>
                                                         </mc:minThreshold>
                                                 </mc:AreaMicroChart>
+                                                <mc:InteractiveBarChart>
+                                                  <mc:bars>
+                                                    <mc:InteractiveBarChartBar label="Followers" value="10"/>
+                                                  </mc:bars>
+                                                </mc:InteractiveBarChart>
+
                                         </IconTabFilter>
                                         <IconTabFilter
                                                 text="Map"
                                                 icon="sap-icon://geographic-bubble-chart">
-                                                <vbm:GeoMap />
+                                                <vbm:GeoMap id="GeoMap1">
+                                                <vbm:vos>
+                                                <vbm:Spots id="GeoMapSpots">
+                                                <vbm:items>
+                                                </vbm:items>
+                                                </vbm:Spots>
+                                                </vbm:vos>
+                                                </vbm:GeoMap>
+                                        </IconTabFilter>
+                                        <IconTabFilter
+                                                text="Network"
+                                                icon="sap-icon://org-chart">
+                                                <FlexBox>
+                                                <g:Graph>
+                                                  <g:nodes>
+                                                    <g:Node key="Node1" title="1" status="Error" />
+                                                    <g:Node key="Node2" title="1" status="Error" />
+                                                  </g:nodes>
+                                                  <g:lines>
+                                                    <g:Line from="Node1" to="Node2" status="Error" />
+                                                  </g:lines>
+                                                </g:Graph>
+                                                </FlexBox>
+
+
                                         </IconTabFilter>
                                         <IconTabFilter
                                                 text="Edit Attributes"
@@ -6120,6 +6152,39 @@
                                 var oThis = this;
 
                                 oThis.getSplitAppObj().to(oThis.createId("Profiles"));
+                                ///HEREFORMAPS
+                                var oGeoMap = this.getView().byId("GeoMap1");
+                                var oMapConfig = {
+                                                  "MapProvider": [{
+                                                  "name": "HEREMAPS",
+                                                  "type": "",
+                                                  "description": "",
+                                                  "tileX": "256",
+                                                  "tileY": "256",
+                                                  "maxLOD": "20",
+                                                  "copyright": "Tiles Courtesy of HERE Maps",
+                                                  "Source": [{
+                                                  "id": "s1",
+                                                  "url": "https://1.base.maps.cit.api.here.com/maptile/2.1/maptile/newest/reduced.day/{LOD}/{X}/{Y}/256/png8?app_id=YOUR_APP_ID&app_code=YOUR_APP_CODE"
+                                                  }, {
+                                                  "id": "s2",
+                                                  "url": "https://2.base.maps.cit.api.here.com/maptile/2.1/maptile/newest/reduced.day/{LOD}/{X}/{Y}/256/png8?app_id=YOUR_APP_ID&app_code=YOUR_APP_CODE"
+                                                  }
+                                                  ]
+                                                  }],
+                                                  "MapLayerStacks": [{
+                                                  "name": "DEFAULT",
+                                                  "MapLayer": {
+                                                  "name": "layer1",
+                                                  "refMapProvider": "HEREMAPS",
+                                                  "opacity": "1.0",
+                                                  "colBkgnd": "RGB(255,255,255)"
+                                                  }
+                                                  }]
+                                                  };
+                                                  oGeoMap.setMapConfiguration(oMapConfig);
+                                                  oGeoMap.setRefMapLayerStack("DEFAULT");
+
 
                                 var menuModel = sap.ui.getCore().getModel("MENUS");
                                 menuModel.setSizeLimit(10000);
@@ -6216,6 +6281,17 @@
                                                         var RelatedLocations = oThis.byId("RelatedLocations");
                                                         RelatedLocations.setModel(menuModel);
                                                         RelatedLocations.bindAggregation("items", "/Pprofile/0/Location", oLocationTableTemplate);
+
+                                                        var oVBI = new sap.ui.vbm.GeoMap({
+                                                           vos : [ new sap.ui.vbm.Spots({
+                                                              items : [ new sap.ui.vbm.Spot({ position : "20;0;0" }) ]
+                                                           }) ]
+                                                        });
+
+
+                                                        var LocationSpots = oThis.byId("GeoMap1");
+                                                        LocationSpots.setModel(menuModel);
+                                                        LocationSpots.bindAggregation("vos", "/Pprofile/0/Location", oVBI);
 
                                                         // RELATED EVENTS
                                                         var oEventTableTemplate = new sap.m.ColumnListItem({
