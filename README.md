@@ -17,6 +17,7 @@
 - sudo virtualenv stoicoinenv
 - source stoicoinenv/bin/activate
 ### For SUSE
+- no sudo for OrientDB
 - sudo zypper install python3-devel
 - Then follow steps including virtualenv as above
 
