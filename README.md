@@ -21,5 +21,9 @@
 - set the proxy for git: git config --global http.proxy http://proxy:8080
 - sudo zypper install python3-devel
 - pip install --proxy=http://proxy:8080 -r requirements.txt
+## Set up the Application service
+- mv startup.service /etc/systemd/system/startup.service
+- # systemctl start startup.service
+- # systemctl status startup.service
 
 
