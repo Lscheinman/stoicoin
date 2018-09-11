@@ -23,7 +23,7 @@
 - pip install --proxy=http://proxy:8080 -r requirements.txt
 ## Set up the Application service
 - mv startup.service /etc/systemd/system/startup.service
-- # systemctl start startup.service
-- # systemctl status startup.service
+- systemctl start startup.service
+- systemctl status startup.service
 
 
