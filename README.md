@@ -16,7 +16,7 @@
 - sudo pip3 install gunicorn
 - sudo virtualenv stoicoinenv
 - source stoicoinenv/bin/activate
-For SUSE
+### For SUSE
 - sudo zypper install python3-devel
 - Then follow steps including virtualenv as above
 
