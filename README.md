@@ -20,6 +20,6 @@
 - no sudo for OrientDB
 - set the proxy for git: git config --global http.proxy http://proxy:8080
 - sudo zypper install python3-devel
-- Then follow steps including virtualenv as above
+- pip install --proxy=http://proxy:8080 -r requirements.txt
 
 
