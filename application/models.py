@@ -869,13 +869,14 @@ class User:
         #TODO query database for existing links to match against already scraped links to prevent duplicate collection
 
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        crawler = oc.Crawler(iObj)
+        print(iObj)
 
         def run_cycle(crawler):
             time.sleep(2)
-            crawler.getLinks()
-            crawler.getText()
             crawler.getSecondDegree()
-            crawler.stopDriver()
+            if iObj['searchEngine'][0] != 0:
+                crawler.stopDriver()
             print(crawler.data['links'])
             O_TYPE = 'Website'
             O_CATEGORY = 'News'
@@ -917,27 +918,31 @@ class User:
                     self.ODB.insertRelation(storyGUID, 'Event', 'PublishedBy', userGUID, 'Object')
 
                 self.run_ta(E_DESC, 'EXTRACTION_CORE')
-
-        crawler = oc.Crawler(iObj)
-        if iObj['searchEngine'][0] == 'true':
-            print("Starting Chrome")
-            crawler.startChrome()
+        
+        if int(iObj['searchEngine'][0]) == 0:
+            print("No Engine, going with requests") 
+            crawler.getURL(crawler.startURL)
         else:
-            print("Starting FireFox")
-            crawler.startFireFox()
-
-        if iObj['searchTerms'][0] != '':
-            crawler.getSearch()
-            time.sleep(2)
-            crawler.getLinks()
-        else:
-            crawler.getLinks()
+            if int(iObj['searchEngine'][0])== 1:
+                print("Starting Chrome")
+                crawler.startChrome()
+            elif int(iObj['searchEngine'][0])== 2:
+                print("Starting FireFox")
+                crawler.startFireFox()
+    
+            if iObj['searchTerms'][0] != '':
+                crawler.getSearch()
+                time.sleep(2)
+                crawler.getLinks()
+            else:
+                crawler.getLinks()
         #run_cycle(crawler)
+        crawler.depth = crawler.linkcount
         T = Thread(target=run_cycle, args=(crawler,))
         T.start()
 
         message = {'response' : 200}
-        text = 'Started crawl of %s and %d links at %s' % (crawler.startURL, crawler.linkcount, TS)
+        text = 'Started crawl of %s and first %d links at %s' % (crawler.startURL, crawler.depth, TS)
         message['text'] = text
         return message
 

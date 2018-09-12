@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*
-import requests, os, time, random
+import requests, os, time, random, re
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as cOptions
@@ -13,13 +13,14 @@ class Crawler():
     def __init__(self, iObj):
         
         self.setPath()
-        self.data = {}
+        self.data = {'links' : [], 'pages' : []}
         self.startURL       = iObj['startURL'][0] + iObj['searchLanguage'][0]
-        self.setSearch(iObj)
-        self.data['links']  = []
         self.showNavigation = iObj['showNavigation'][0]
         self.searchLanguage = iObj['searchLanguage'][0]
         self.searchDepth    = iObj['searchDepth'][0]
+        self.ActiveDriver   = requests
+        self.visited = []
+        self.depth = 0
     
     def getAttributes(self):
         print('startURL: %s\nshowNavigation: %s\n' % (self.startURL, self.showNavigation))
@@ -108,18 +109,18 @@ class Crawler():
         
         time.sleep(random.randint(1,3))
         
-        if 'aljazeera' in self.startURL:
-            links = self.ActiveDriver.find_elements_by_tag_name('a')
-        else:
-            links = self.ActiveDriver.find_elements_by_xpath('.//a')
-        for l in links:
-            Link = {'text' : l.text, 'link' : l.get_attribute('href')}
-            if Link['text'].count(' ') > 2 and Link['link'] not in self.data['links'] and Link['link'] != None:
-                if Link['text'] != 'Art, Graphics & Video':
-                    self.data['links'].append(Link)
-                print("!!LINK: %s" % Link)
+        if self.ActiveDriver != requests:
+            if 'aljazeera' in self.startURL:
+                links = self.ActiveDriver.find_elements_by_tag_name('a')
+            else:
+                links = self.ActiveDriver.find_elements_by_xpath('.//a')
+            for l in links:
+                Page = {'text' : l.text, 'link' : l.get_attribute('href')}
+                if Page['text'].count(' ') > 2 and Page['link'] not in self.data['links'] and Page['link'] != None:
+                    if Page['text'] != 'Art, Graphics & Video':
+                        self.data['links'].append(Page)
+
         self.linkcount = len(self.data['links'])
-        print(self.linkcount)
     
     def getSearch(self):
         
@@ -201,70 +202,96 @@ class Crawler():
             i+=1 
         return search
     
-    def getURL(self, url):
-        u = requests.get(url)
+    def getURL(self, URL):
+        
+        print("Getting URL %s" % URL)
+        stop2 = [';r', ' /', '<s', '<!', '[', ';+', '[i', ';d', ';i']
+        stop20 = ['The content included']
+        def visible(element):
+            if element.parent.name in ['style', 'script', '[document]', 'head', 'title']:
+                return False
+            elif re.match('<!--.*-->', str(element.encode('utf-8'))):
+                return False
+            return True        
+        
+        u = requests.get(URL)
         soup = BeautifulSoup(u.content, "xml")
-        paras = soup.findAll('p')
-        links = soup.findAll('a')
+        paras = list(filter(visible, soup.findAll(text=True)))
+        TEXT = ''
+        for t in paras:
+            if str(t[:2]) not in stop2 and str(t[:20]) not in stop20:
+                TEXT = TEXT + t
+        for l in soup.findAll('a', href=True):
+            if l['href'][:4] == 'http' and l['href'] not in self.data['links']:
+                self.data['links'].append(l['href'])
+        self.data['pages'].append({'text' : TEXT, 'link' : URL})
+        self.visited.append(URL)
+        self.linkcount = len(self.data['links'])
         
-        return {'p' : paras, 'l' : links}
-        
-    
     def getSecondDegree(self):
         
         story = {'title' : ''}
-        i = 0
-        visited = []
+        j = i = 0
         for e in self.data['links']:
             i = 0
-            if e['link'] not in visited:
-                visited.append(e['link'])
-                try:
-                    self.ActiveDriver.get(e['link'])
+            if j > self.depth:
+                break                
+            
+            j+=1
+            if e not in self.visited:
+                self.visited.append(e)
+                if self.ActiveDriver == requests:
                     try:
-                        closeD = self.ActiveDriver.find_element_by_id('ensCloseBanner')
-                        closeD.click()
+                        self.getURL(e)
                     except:
                         pass
+                else:
                     try:
-                        closeD = self.ActiveDriver.find_element_by_id('ensNotifyBanner')
-                        closeD.click()
-                    except:
-                        pass   
-                    if 'aljazeera' in self.startURL:
-                        if self.driverType == 'CH':
-                            texts = self.ActiveDriver.find_elements_by_id('skip')
-                            #$0.textContent
-                        if len(texts) == 0:
-                            texts = self.ActiveDriver.find_elements_by_id('DynamicContentContainer')
-                        if len(texts) == 0:
-                            texts = self.ActiveDriver.find_elements_by_tag_name('span')                        
-                    
-                    elif 'nairaland.com' in self.startURL:
-                        e['user'] = self.ActiveDriver.find_element_by_class_name('user').text
-                        e['date']  = self.ActiveDriver.find_element_by_class_name('s').text
-                        e['fulltext'] = self.ActiveDriver.find_element_by_class_name('narrow').text.replace('\n', ' ').replace("'", '').replace('"', '')  
-                        print(e)
-                    else:
-                        texts = self.ActiveDriver.find_elements_by_class_name('selectionShareable')
-                    
-                    if 'nairaland.com' not in self.startURL:
+                        self.ActiveDriver.get(e)
                         try:
-                            paras = BeautifulSoup(requests.get(self.ActiveDriver.current_url).content, 'lxml').findAll('p')
+                            closeD = self.ActiveDriver.find_element_by_id('ensCloseBanner')
+                            closeD.click()
                         except:
-                            paras = texts
-                        story = texts[0].text
-                        i+=1
-                        for t in paras:
-                            if t.text not in story:
-                                story = story + ' ' + t.text
-                                if '.2018' in t.text and i < 5:
-                                    dtg = t.text.find('2018')
-                                    e['date'] = t.text[dtg-6:dtg+5]
+                            pass
+                        try:
+                            closeD = self.ActiveDriver.find_element_by_id('ensNotifyBanner')
+                            closeD.click()
+                        except:
+                            pass   
+                        if 'aljazeera' in self.startURL:
+                            if self.driverType == 'CH':
+                                texts = self.ActiveDriver.find_elements_by_id('skip')
+                                #$0.textContent
+                            if len(texts) == 0:
+                                texts = self.ActiveDriver.find_elements_by_id('DynamicContentContainer')
+                            if len(texts) == 0:
+                                texts = self.ActiveDriver.find_elements_by_tag_name('span')                        
+                        
+                        elif 'nairaland.com' in self.startURL:
+                            e['user'] = self.ActiveDriver.find_element_by_class_name('user').text
+                            e['date']  = self.ActiveDriver.find_element_by_class_name('s').text
+                            e['fulltext'] = self.ActiveDriver.find_element_by_class_name('narrow').text.replace('\n', ' ').replace("'", '').replace('"', '')  
+                            print(e)
+                        else:
+                            texts = self.ActiveDriver.find_elements_by_class_name('selectionShareable')
+                        
+                        if 'nairaland.com' not in self.startURL:
+                            try:
+                                paras = BeautifulSoup(requests.get(self.ActiveDriver.current_url).content, 'lxml').findAll('p')
+                            except:
+                                paras = texts
+                            story = texts[0].text
                             i+=1
-                        e['fulltext'] = story.replace('\n', ' ').replace("'", '').replace('"', '')                  
-                except:
-                    pass
+                            for t in paras:
+                                if t.text not in story:
+                                    story = story + ' ' + t.text
+                                    if '.2018' in t.text and i < 5:
+                                        dtg = t.text.find('2018')
+                                        e['date'] = t.text[dtg-6:dtg+5]
+                                i+=1
+                            e['fulltext'] = story.replace('\n', ' ').replace("'", '').replace('"', '')                  
+                    except:
+                        pass
 
         return '%d texts from %d links' % (i, len(self.data['links']))
     
@@ -276,8 +303,8 @@ class Crawler():
 # ''
 CRAWL = {}
 CRAWL['searchDepth'] = ['Single']
-CRAWL['startURL'] = ['https://www.nairaland.com/']
-#CRAWL['startURL'] = ['https://www.aljazeera.com/']
+#CRAWL['startURL'] = ['https://www.nairaland.com/']
+CRAWL['startURL'] = ['https://www.aljazeera.com/']
 #CRAWL['searchTerms'] = ['محمد بن سلمان']
 CRAWL['searchTerms'] = ['']
 CRAWL['searchLanguage'] = ['']
@@ -285,11 +312,12 @@ CRAWL['searchURL'] = ['%s%s/search' % (CRAWL['startURL'], CRAWL['searchLanguage'
 CRAWL['searchURL'] = 'http://www.aljazeera.net/home/search?q=%D9%85%D8%AD%D9%85%D8%AF%20%D8%A8%D9%86%20%D8%B3%D9%84%D9%85%D8%A7%D9%86'
 CRAWL['showNavigation'] = ['true']
 #c = Crawler(CRAWL)
-#url = c.getURL(c.startURL)
+#c.getURL(c.startURL)
 #surl = c.getURL(c.searchURL)
 #print(surl)
 #c.startFireFox()
 #c.startChrome()
+#c.depth = c.linkcount
 
 #c.getLinks()
 #c.getSearch()
