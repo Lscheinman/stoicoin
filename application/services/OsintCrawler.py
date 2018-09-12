@@ -97,7 +97,6 @@ class Crawler():
         self.ActiveDriver = self.chromeDriver    
         self.chromeDriver.get(self.startURL)
         
-    
     def getText(self):
         text = self.ActiveDriver.find_elements_by_class_name('text')
         self.data['firstPagetext'] = []
