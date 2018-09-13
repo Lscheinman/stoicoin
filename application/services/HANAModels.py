@@ -23,9 +23,9 @@ class HANAModel():
             self.SocialPath = '%s\\application\\services\\data\\Social.csv' % (os.getcwd())
         else:
             try:
-                auth = '%s/services/config/AUTH_HANA.json' % (os.getcwd())
-                self.BaseBook   = '%s/services/data/BaseBook.xlsx' % (os.getcwd()) # debugging line
-                self.SocialPath = '%s/services/data/Social.csv' % (os.getcwd())
+                auth = '%s/application/services/config/AUTH_HANA.json' % (os.getcwd())
+                self.BaseBook   = '%s/application/services/data/BaseBook.xlsx' % (os.getcwd()) # debugging line
+                self.SocialPath = '%s/application/services/data/Social.csv' % (os.getcwd())
 
             except:
                 auth = '%s/config/AUTH_HANA.json' % (os.getcwd())

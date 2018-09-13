@@ -3,6 +3,7 @@ Flask application views (routes).
 '''
 import os, time, csv, requests, base64, json
 from flask import Flask, request, session, redirect, url_for, render_template, flash, send_file, jsonify
+from flask.ext.socketio import SocketIO, emit
 from werkzeug.utils import secure_filename
 from application import flask, app
 from functools import wraps
@@ -926,6 +927,12 @@ def load_entity_profile():
         flash("Log in to access tasking functionality.")
         return redirect(url_for("login"))
 
+@app.route("/UpdateView", methods=["POST"])
+def UpdateView():
+
+    return
+
+
 @app.route("/add_task", methods=["POST"])
 def add_task():
 
@@ -991,6 +998,9 @@ def update_condis(username):
     else:
         flash("Log in to access Condis functionality.")
         return redirect(url_for("login"))
+
+
+
 
 @app.route("/PIRAPP")
 def PIRAPP():
