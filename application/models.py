@@ -90,7 +90,7 @@ class User:
         return False
     def is_authenticated(self):
         return True
-    
+
     def startHANA(self):
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         if 'AUTH_HANA.json' in os.listdir(self.authpath):
@@ -101,7 +101,7 @@ class User:
         else:
             self.HANA = False
             self.HDB = None
-            print("[%s_APP-Model-Init]: No authorization for HANA. No HANA loaded" % (TS))        
+            print("[%s_APP-Model-Init]: No authorization for HANA. No HANA loaded" % (TS))
 
     def menus(self):
         '''
@@ -459,8 +459,9 @@ class User:
         # Test connections to HANA systems
         # Test assignment of new users
 
+
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
- 
+
         auth = '%sAUTH_HANA.json' % (self.authpath)
         print("[%s_APP-Model-user_systems]: Creating credentials for %s at %s with %s:" % (TS, username, auth, iObj))
         with open(auth, 'w') as outfile:
@@ -919,7 +920,7 @@ class User:
                     self.ODB.insertRelation(storyGUID, 'Event', 'PublishedBy', userGUID, 'Object')
 
                 self.run_ta(E_DESC, 'EXTRACTION_CORE')
-        
+
         if int(iObj['searchEngine'][0]) == 0:
             crawler.getURL(crawler.startURL)
         else:
@@ -927,7 +928,7 @@ class User:
                 crawler.startChrome()
             elif int(iObj['searchEngine'][0])== 2:
                 crawler.startFireFox()
-    
+
             if iObj['searchTerms'][0] != '':
                 crawler.getSearch()
                 time.sleep(2)

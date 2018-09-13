@@ -9,9 +9,10 @@ from selenium.webdriver.common.keys import Keys
 
 debugging = False
 class Crawler():
+
     
     def __init__(self, iObj):
-        
+
         self.setPath()
         self.data = {'links' : [], 'pages' : []}
         self.startURL       = iObj['startURL'][0] + iObj['searchLanguage'][0]
@@ -21,12 +22,12 @@ class Crawler():
         self.ActiveDriver   = requests
         self.visited = []
         self.depth = 0
-    
+
     def getAttributes(self):
         print('startURL: %s\nshowNavigation: %s\n' % (self.startURL, self.showNavigation))
-    
+
     def setSearch(self, iObj):
-        
+
         if iObj['searchTerms'][0] != '':
             self.searchString = iObj['searchTerms'][0]
             self.searchTerms = self.searchString.split()
@@ -55,16 +56,16 @@ class Crawler():
                 self.chromePath = '%s\\application\\services\\config\\chromedriver.exe' % (os.getcwd())
                 self.firefoxPath = '%s\\application\\services\\config\\geckodriver.exe' % (os.getcwd())
             else:
-                self.chromePath = '%s\\config\\chromedriver.exe' % (os.getcwd()) # debugging line   
-                self.firefoxPath = '%s\\config\\geckodriver.exe' % (os.getcwd()) # debugging line  
+                self.chromePath = '%s\\config\\chromedriver.exe' % (os.getcwd()) # debugging line
+                self.firefoxPath = '%s\\config\\geckodriver.exe' % (os.getcwd()) # debugging line
         else:
             if debugging == False:
-                self.chromePath = '%s/application/services/config/chromedriver.exe' % (os.getcwd())  
-                self.firefoxPath = '%s/application/services/config/geckodriver.exe' % (os.getcwd()) 
+                self.chromePath = '%s/application/services/config/chromedriver.exe' % (os.getcwd())
+                self.firefoxPath = '%s/application/services/config/geckodriver.exe' % (os.getcwd())
             else:
-                self.chromePath = '%s/config/chromedriver.exe' % (os.getcwd()) # debugging line  
-                self.firefoxPath = '%s/config/geckodriver.exe' % (os.getcwd()) # debugging line 
-    
+                self.chromePath = '%s/config/chromedriver.exe' % (os.getcwd()) # debugging line
+                self.firefoxPath = '%s/config/geckodriver.exe' % (os.getcwd()) # debugging line
+
     def startFireFox(self):
         self.driverType = 'FF'
         if self.showNavigation == 'false':
@@ -73,16 +74,16 @@ class Crawler():
             self.FFdriver = webdriver.Firefox(executable_path=self.firefoxPath, firefox_options=firefox_options)
         else:
             self.FFdriver = webdriver.Firefox(executable_path=self.firefoxPath)
-            
+
         self.ActiveDriver = self.FFdriver
         self.ActiveDriver.get(self.startURL)
-    
+
     def stopFireFox(self):
         self.FFdriver.quit()
-    
+
     def stopDriver(self):
         self.ActiveDriver.quit()
-                
+
     def startChrome(self):
         self.driverType = 'CH'
         chrome_options = cOptions()
@@ -92,23 +93,23 @@ class Crawler():
             chrome_options.add_argument("--headless")
             print("headless")
             self.chromeDriver = webdriver.Chrome(executable_path=self.chromePath, chrome_options=chrome_options)
-        else:  
+        else:
             self.chromeDriver = webdriver.Chrome(executable_path=self.chromePath)
-        
-        self.ActiveDriver = self.chromeDriver    
+
+        self.ActiveDriver = self.chromeDriver
         self.chromeDriver.get(self.startURL)
-        
-    
+
+
     def getText(self):
         text = self.ActiveDriver.find_elements_by_class_name('text')
         self.data['firstPagetext'] = []
         for t in text:
-            self.data['firstPagetext'].append(t.text)        
-    
+            self.data['firstPagetext'].append(t.text)
+
     def getLinks(self):
-        
+
         time.sleep(random.randint(1,3))
-        
+
         if self.ActiveDriver != requests:
             if 'aljazeera' in self.startURL:
                 links = self.ActiveDriver.find_elements_by_tag_name('a')
@@ -121,30 +122,30 @@ class Crawler():
                         self.data['links'].append(Page)
 
         self.linkcount = len(self.data['links'])
-    
+
     def getSearch(self):
-        
+
         if 'aljazeera' in self.startURL:
             search = self.ActiveDriver.find_element_by_class_name('searchbtnlink')
-            search.click() 
+            search.click()
             time.sleep(1)
-            searchInput = self.ActiveDriver.find_element_by_id('searchInput')            
+            searchInput = self.ActiveDriver.find_element_by_id('searchInput')
         else:
             search = self.ActiveDriver.find_element_by_id('search')
-            search.click() 
+            search.click()
             time.sleep(1)
-            searchInput = self.ActiveDriver.find_element_by_class_name('searhmain')           
+            searchInput = self.ActiveDriver.find_element_by_class_name('searhmain')
         if search:
 
             time.sleep(1)
             searchInput.send_keys(self.searchString)
-            searchInput.send_keys(Keys.ENTER) 
+            searchInput.send_keys(Keys.ENTER)
             time.sleep(random.randint(1,3))
         else:
             print("No search found")
-    
+
     def getGraphics(self):
-        
+
         images = self.data['images'] = []
         for l in self.data['links']:
             if l['text'] == 'infographic':
@@ -156,16 +157,16 @@ class Crawler():
                 image['src'] = i.get_attribute('src')
                 image['text'] = i.get_attribute('alt')
                 self.data['images'].append(image)
-                  
+
     def search(self):
         self.ActiveDriver.get(self.searchURL)
         s = self.ActiveDriver.find_element_by_xpath('''//*[@id="search-page"]/div[1]/div[1]/label''')
         button = self.ActiveDriver.find_element_by_xpath('''//*[@id="search-page"]/div[1]/div[3]/button''')
         s.click()
         s = self.ActiveDriver.find_element_by_id('field-s').send_keys('go')
-        
+
     def getSelectionShareable(self):
-        
+
         e = {}
         try:
             texts = self.ActiveDriver.find_elements_by_class_name('selectionShareable')
@@ -178,13 +179,13 @@ class Crawler():
                         dtg = t.text.find('2018')
                         e['date'] = t.text[dtg-6:dtg+5]
                 i+=1
-            e['fulltext'] = story.replace('\n', ' ').replace("'", '').replace('"', '')                  
+            e['fulltext'] = story.replace('\n', ' ').replace("'", '').replace('"', '')
         except:
             pass
-        
+
         return e['fulltext']
-        
-    
+
+
     def getSearchURL(self, search):
         arabic = True
         i = 1
@@ -199,11 +200,11 @@ class Crawler():
                     search = '%s%s' % (search, sw) + '20' + '%'
                 else:
                     search = '%s%s20%' % (search, sw)
-            i+=1 
+            i+=1
         return search
-    
+
     def getURL(self, URL):
-        
+
         print("Getting %s" % URL)
         stop2 = [';r', ' /', '<s', '<!', '[', ';+', '[i', ';d', ';i']
         stop20 = ['The content included']
@@ -212,8 +213,8 @@ class Crawler():
                 return False
             elif re.match('<!--.*-->', str(element.encode('utf-8'))):
                 return False
-            return True        
-        
+            return True
+
         u = requests.get(URL)
         soup = BeautifulSoup(u.content, "xml")
         paras = list(filter(visible, soup.findAll(text=True)))
@@ -227,16 +228,16 @@ class Crawler():
         self.data['pages'].append({'text' : TEXT, 'link' : URL})
         self.visited.append(URL)
         self.linkcount = len(self.data['links'])
-        
+
     def getSecondDegree(self):
-        
+
         story = {'title' : ''}
         j = i = 0
         for e in self.data['links']:
             i = 0
             if j > self.depth:
-                break                
-            
+                break
+
             j+=1
             if e not in self.visited:
                 self.visited.append(e)
@@ -257,7 +258,7 @@ class Crawler():
                             closeD = self.ActiveDriver.find_element_by_id('ensNotifyBanner')
                             closeD.click()
                         except:
-                            pass   
+                            pass
                         if 'aljazeera' in self.startURL:
                             if self.driverType == 'CH':
                                 texts = self.ActiveDriver.find_elements_by_id('skip')
@@ -265,15 +266,15 @@ class Crawler():
                             if len(texts) == 0:
                                 texts = self.ActiveDriver.find_elements_by_id('DynamicContentContainer')
                             if len(texts) == 0:
-                                texts = self.ActiveDriver.find_elements_by_tag_name('span')                        
-                        
+                                texts = self.ActiveDriver.find_elements_by_tag_name('span')
+
                         elif 'nairaland.com' in self.startURL:
                             e['user'] = self.ActiveDriver.find_element_by_class_name('user').text
                             e['date']  = self.ActiveDriver.find_element_by_class_name('s').text
-                            e['fulltext'] = self.ActiveDriver.find_element_by_class_name('narrow').text.replace('\n', ' ').replace("'", '').replace('"', '')  
+                            e['fulltext'] = self.ActiveDriver.find_element_by_class_name('narrow').text.replace('\n', ' ').replace("'", '').replace('"', '')
                         else:
                             texts = self.ActiveDriver.find_elements_by_class_name('selectionShareable')
-                        
+
                         if 'nairaland.com' not in self.startURL:
                             try:
                                 paras = BeautifulSoup(requests.get(self.ActiveDriver.current_url).content, 'lxml').findAll('p')
@@ -288,12 +289,12 @@ class Crawler():
                                         dtg = t.text.find('2018')
                                         e['date'] = t.text[dtg-6:dtg+5]
                                 i+=1
-                            e['fulltext'] = story.replace('\n', ' ').replace("'", '').replace('"', '')                  
+                            e['fulltext'] = story.replace('\n', ' ').replace("'", '').replace('"', '')
                     except:
                         pass
 
         return '%d texts from %d links' % (i, len(self.data['links']))
-    
+
     def stopChrome(self):
         self.chromeDriver.quit()
 
@@ -322,9 +323,5 @@ CRAWL['showNavigation'] = ['true']
 #c.getSearch()
 #c.getGraphics()
 #c.getSecondDegree()
-#print(c.data)  
+#print(c.data)
 #c.search(CRAWL['searchURL'], CRAWL['searchTerms'])
-
-    
-                
-    
