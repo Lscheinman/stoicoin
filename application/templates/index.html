@@ -1111,8 +1111,8 @@
                 <HBox class="sapUiSmallMargin">
                 {% if session.utype in AUTH['AE'] %}
                 <GenericTile class="sapUiTinyMarginBegin sapUiTinyMarginTop tileLayout"
-                  header="Dashboard Analytics"
-                  subheader="Views and reports"
+                  header="Expert Analytics"
+                  subheader="Tools and Reports"
                   press="Dissem1">
                         <TileContent>
                            <ImageContent src="sap-icon://bbyd-dashboard" />
@@ -8971,7 +8971,7 @@
                         onPressUpdateUserTokens : function() {
 
                                 var UPDATE = {}
-
+                                UPDATE['user'] =
                                 UPDATE['client_key']  = this.byId("UserClientKey").getValue();
                                 UPDATE['client_secret'] = this.byId("UserClientSecret").getValue();
                                 UPDATE['token']   = this.byId("UserToken").getValue();
@@ -8987,7 +8987,7 @@
                                         data : UPDATE,
                                         success : function(data,textStatus, jqXHR) {
                                             oModel.setData({modelData : data});
-                                            MessageToast.show("Update Success");
+                                            MessageToast.show(data['message']);
                                         }
                                 });
                         },

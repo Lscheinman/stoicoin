@@ -18,7 +18,7 @@ class HANAModel():
     def __init__(self):
 
         if '\\' in os.getcwd():
-            auth = '%s\\application\\services\\config\\AUTH_HANAg.json' % (os.getcwd())
+            auth = '%s\\application\\services\\config\\AUTH_HANA.json' % (os.getcwd())
             self.BaseBook = '%s\\application\\services\\data\\BaseBook.xlsx' % (os.getcwd())
             self.SocialPath = '%s\\application\\services\\data\\Social.csv' % (os.getcwd())
         else:

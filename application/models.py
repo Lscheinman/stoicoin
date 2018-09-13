@@ -440,10 +440,10 @@ class User:
 
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
 
-        if iObj['TokenType'][0] == 'twitter':
-            auth = '%s_AUTH_Twitter.json' % (self.authpath)
-        elif iObj['TokenType'][0] == 'facebook':
-            auth = '%s_AUTH_Facebook.json' % self.authpath
+        if iObj['TokenType'] == 'twitter':
+            auth = '%s%s_AUTH_Twitter.json' % (self.authpath, username)
+        elif iObj['TokenType'] == 'facebook':
+            auth = '%s%s_AUTH_Facebook.json' % (self.authpath, username)
 
         print("[%s_APP-Model-user_tokens]: Creating tokens for %s at %s with %s:" % (TS, username, auth, iObj))
         with open(auth, 'w') as outfile:
@@ -456,12 +456,8 @@ class User:
     def user_systems(self, iObj, username):
 
         #TODO: initiate ODB-HDB synch upon connection
-        # Test connections to HANA systems
-        # Test assignment of new users
-
 
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-
         auth = '%sAUTH_HANA.json' % (self.authpath)
         print("[%s_APP-Model-user_systems]: Creating credentials for %s at %s with %s:" % (TS, username, auth, iObj))
         with open(auth, 'w') as outfile:
@@ -502,16 +498,14 @@ class User:
 
     def load_user_tokens(self, TokenType, username):
 
-        try:
-            if TokenType == 'twitter':
-                auth = '%s_AUTH_Twitter.json' % (self.authpath)
-            elif TokenType == 'facebook':
-                auth = '%s_AUTH_Facebook.json' % (self.authpath)
-            with open(auth) as json_file:
-                print('Getting auth %s' % auth)
-                return json.load(json_file)
-        except:
-            return None
+        if TokenType == 'twitter':
+            auth = '%s%s_AUTH_Twitter.json' % (self.authpath, username)
+        elif TokenType == 'facebook':
+            auth = '%s%s_AUTH_Facebook.json' % (self.authpath, username)
+        with open(auth) as json_file:
+            print('Getting auth %s' % auth)
+            auth = json.load(json_file)
+        return auth
 
     def get_News(self):
         newsChannels = ['BBCWorld']
@@ -969,21 +963,18 @@ class User:
         #self.pir_justification(PIRREF, MSG['GUID'], 'Collection')
         NoPreviousSearch = True
         if NoPreviousSearch != False:
-
             self.Twitter.setSearchID(MSG['GUID'])
             st = searchterm
-
             if searchtype == 'username':
-                #t1 = Thread(target=self.Twitter.getAllTweets, args=(st, searchtype,))
-                #t1.start()
-                self.Twitter.getAllTweets(st, searchtype)
+                t1 = Thread(target=self.Twitter.getAllTweets, args=(st, searchtype,))
+                t1.start()
+                #self.Twitter.getAllTweets(st, searchtype)
                 message  = 'Twitter username collection on %s started.' % searchterm
                 MSG['messages'] .append(message)
             elif searchtype == 'term':
-                #t2 = Thread(target=self.Twitter.getAllTweets, args=(st, searchtype,))
-                #t2.start()
-                print("!!!!!!!!!-----------")
-                self.Twitter.getAllTweets(searchterm, 'hashtags')
+                t2 = Thread(target=self.Twitter.getAllTweets, args=(st, searchtype,))
+                t2.start()
+                #self.Twitter.getAllTweets(searchterm, 'hashtags')
                 message = 'Twitter term collection on %s started.' % searchterm
                 MSG['messages'].append(message)
             elif searchtype == 'associates':

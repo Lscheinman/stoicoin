@@ -3,7 +3,6 @@ Flask application views (routes).
 '''
 import os, time, csv, requests, base64, json
 from flask import Flask, request, session, redirect, url_for, render_template, flash, send_file, jsonify
-from flask.ext.socketio import SocketIO, emit
 from werkzeug.utils import secure_filename
 from application import flask, app
 from functools import wraps
@@ -622,25 +621,26 @@ def etl_file():
 
 @app.route("/user_tokens", methods=["POST"])
 def user_tokens():
-
+    msg = {'status' : 200, 'message' : ''}
     iObj = request.form.to_dict(flat=False)
+    jOBJ = {'client_key' : iObj['client_key'][0], 'client_secret' : iObj['client_secret'][0], 'token' : iObj['token'][0], 'token_secret' : iObj['token_secret'][0], 'TokenType' : iObj['TokenType'][0]}
     TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
     print("[%s_APP-View-user_tokens]: Received: %s %s" % (TS, type(iObj), iObj))
 
     if check_user() == True:
         user = User(session["username"])
-        message = user.user_tokens(iObj, session["username"])
+        msg['message'] = user.user_tokens(jOBJ, session["username"])
 
     else:
         flash("Log in to access collection functionality.")
         return redirect(url_for("login"))
 
-    return message
+    return jsonify(msg)
 
 
 @app.route("/user_systems", methods=["POST"])
 def user_systems():
-
+    msg = {'status' : 200, 'message' : ''}
     iObj = request.form.to_dict(flat=False)
     TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
     print("[%s_APP-View-user_tokens]: Received: %s %s" % (TS, type(iObj), iObj))
@@ -648,13 +648,13 @@ def user_systems():
 
     if check_user() == True:
         user = User(session["username"])
-        message = user.user_systems(jOBJ, session["username"])
+        msg['message']  = user.user_systems(jOBJ, session["username"])
 
     else:
         flash("Log in to access collection functionality.")
         return redirect(url_for("login"))
 
-    return jsonify(message)
+    return jsonify(msg)
 
 @app.route("/from_SPF", methods=["GET", "POST"])
 def from_SPF():
