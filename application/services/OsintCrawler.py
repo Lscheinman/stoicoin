@@ -204,7 +204,7 @@ class Crawler():
     
     def getURL(self, URL):
         
-        print("Getting URL %s" % URL)
+        print("Getting %s" % URL)
         stop2 = [';r', ' /', '<s', '<!', '[', ';+', '[i', ';d', ';i']
         stop20 = ['The content included']
         def visible(element):
@@ -271,7 +271,6 @@ class Crawler():
                             e['user'] = self.ActiveDriver.find_element_by_class_name('user').text
                             e['date']  = self.ActiveDriver.find_element_by_class_name('s').text
                             e['fulltext'] = self.ActiveDriver.find_element_by_class_name('narrow').text.replace('\n', ' ').replace("'", '').replace('"', '')  
-                            print(e)
                         else:
                             texts = self.ActiveDriver.find_elements_by_class_name('selectionShareable')
                         

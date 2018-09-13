@@ -39,13 +39,6 @@ class User:
         self.GUID = None
         # Set up the connection to HANA and ConDis
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-        try:
-            self.HDB = HM.HANAModel()
-            self.HDB.goLive()
-            print("[%s_APP-Model-Init]: HANA connection successful" % (TS))
-        except:
-            self.HDB = None
-            print("[%s_APP-Model-Init]: No HANA loaded" % (TS))
 
         if '\\' in os.getcwd():
             if debugging == False:
@@ -69,7 +62,7 @@ class User:
                 self.datapath  = ('%s/application/services/data/' % (parentdir))
                 self.upload    = ('%s/application/services/data/upload/' % (parentdir))
                 self.processed    = ('%s/application/services/data/processed/' % (parentdir))
-
+        self.startHANA()
         self.ODB = om.OrientModel(self.HDB)
         self.ODB.openDB('POLER')
         self.LEO = leo.LeonardoModel(self.ODB)
@@ -81,7 +74,6 @@ class User:
         self.Facebook = fb.OsintFacebook(fbAuth, self.ODB)
         self.user = self.find()
         self.threads = []
-        self.HANA = False
         self.PIRcache = []
         self.STRcache = []
         self.Pcache = []
@@ -98,6 +90,18 @@ class User:
         return False
     def is_authenticated(self):
         return True
+    
+    def startHANA(self):
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        if 'AUTH_HANA.json' in os.listdir(self.authpath):
+            self.HDB = HM.HANAModel()
+            self.HDB.goLive()
+            self.HANA = True
+            print("[%s_APP-Model-Init]: HANA connection successful" % (TS))
+        else:
+            self.HANA = False
+            self.HDB = None
+            print("[%s_APP-Model-Init]: No authorization for HANA. No HANA loaded" % (TS))        
 
     def menus(self):
         '''
@@ -292,7 +296,6 @@ class User:
     def run_ta(self, text, TA_CONFIG):
 
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-        print("[%s_APP-Model-run_ta]: Process started: %s\n\t%s" % (TS, text, TA_CONFIG))
         today = datetime.now().strftime("%F %H:%M:%S")
         CATEGORY = 'TEXT_ANALYTICS'
         CLASS1 = len(text)
@@ -457,15 +460,16 @@ class User:
         # Test assignment of new users
 
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-
-        auth = '%s_AUTH_HANA.json' % (self.authpath)
+ 
+        auth = '%sAUTH_HANA.json' % (self.authpath)
         print("[%s_APP-Model-user_systems]: Creating credentials for %s at %s with %s:" % (TS, username, auth, iObj))
         with open(auth, 'w') as outfile:
             json.dump(iObj, outfile)
-            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_APP-Model-user_systems]: File %s containing %s added.:" % (TS, auth, iObj))
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        self.startHANA()
+        print("[%s_APP-Model-user_systems]: File %s containing %s added:" % (TS, auth, iObj))
 
-        return "%s credentials created for %s." % (iObj['TokenType'], username)
+        return "System credentials created for %s." % (username)
 
     def load_stored_procedure(self, StoredProcedureType, GUID):
 
@@ -858,7 +862,6 @@ class User:
                  'Event'  : [],
                  'COUNTS' : {'Objects' : 0, 'Persons' : 0, 'GUID' : []}
         }
-        print(qVars)
         t = Thread(target=self.RSS.getLiveGDELT, args=(qVars,))
         t.start()
 
@@ -870,14 +873,12 @@ class User:
 
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         crawler = oc.Crawler(iObj)
-        print(iObj)
 
         def run_cycle(crawler):
             time.sleep(2)
             crawler.getSecondDegree()
-            if iObj['searchEngine'][0] != 0:
+            if int(iObj['searchEngine'][0]) != 0:
                 crawler.stopDriver()
-            print(crawler.data['links'])
             O_TYPE = 'Website'
             O_CATEGORY = 'News'
             O_DESC = iObj['startURL'][0]
@@ -897,11 +898,11 @@ class User:
             websiteGUID = self.ODB.insertObject(O_TYPE, O_CATEGORY, O_DESC, O_CLASS1, O_CLASS2, O_CLASS3, O_ORIGIN, O_ORIGINREF, O_LOGSOURCE)
             crawlGUID   = self.ODB.insertEvent(E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE)
             self.ODB.insertRelation(crawlGUID, 'Event', 'OccurredAt', websiteGUID, 'Object')
-            for l in crawler.data['links']:
+            for l in crawler.data['pages']:
                 E_TYPE = 'OSINT'
                 E_CATEGORY = 'NewsStory'
                 try:
-                    E_DESC = str(l['text']) + ' ' + str(l['fulltext'])
+                    E_DESC = str(l['text'])
                 except:
                     E_DESC = l['text']
                 E_CLASS1   = len(E_DESC)
@@ -920,14 +921,11 @@ class User:
                 self.run_ta(E_DESC, 'EXTRACTION_CORE')
         
         if int(iObj['searchEngine'][0]) == 0:
-            print("No Engine, going with requests") 
             crawler.getURL(crawler.startURL)
         else:
             if int(iObj['searchEngine'][0])== 1:
-                print("Starting Chrome")
                 crawler.startChrome()
             elif int(iObj['searchEngine'][0])== 2:
-                print("Starting FireFox")
                 crawler.startFireFox()
     
             if iObj['searchTerms'][0] != '':

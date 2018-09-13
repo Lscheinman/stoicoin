@@ -642,16 +642,17 @@ def user_systems():
     iObj = request.form.to_dict(flat=False)
     TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
     print("[%s_APP-View-user_tokens]: Received: %s %s" % (TS, type(iObj), iObj))
+    jOBJ = {'host' : iObj['host'][0], 'port' : iObj['port'][0], 'user' : iObj['user'][0], 'password' : iObj['password'][0], 'userCondis' : iObj['userCondis'][0], 'pswdCondis' : iObj['pswdCondis'][0]}
 
     if check_user() == True:
         user = User(session["username"])
-        message = user.user_systems(iObj, session["username"])
+        message = user.user_systems(jOBJ, session["username"])
 
     else:
         flash("Log in to access collection functionality.")
         return redirect(url_for("login"))
 
-    return message
+    return jsonify(message)
 
 @app.route("/from_SPF", methods=["GET", "POST"])
 def from_SPF():

@@ -5102,6 +5102,7 @@
                                                                                         <core:Item text="Twitter"        key="twitter"/>
                                                                                         <core:Item text="YouTube"        key="youtube"/>
                                                                                         <core:Item text="Facebook"       key="facebook"/>
+                                                                                        <core:Item text="SAP HANA"       key="hana"/>
                                                                                 </items>
                                                                         </Select>
                                                                         <Label text="Client key or Email" />
@@ -5129,6 +5130,71 @@
                                                                                 >
                                                                         </Input>
                                                                         <Button id="UpdateUserTokens" text="Add Tokens" press="onPressUpdateUserTokens" type="Emphasized"/>
+                                                                </f:content>
+                                                                </f:SimpleForm>
+                                                        </VBox>
+                                        </IconTabFilter>
+                                        <IconTabFilter
+                                                text="Add System"
+                                                icon="sap-icon://database">
+                                                        <VBox class="sapUiSmallMargin">
+                                                                <f:SimpleForm id="USERSYSTEMS"
+                                                                        editable="true"
+                                                                        layout="ResponsiveGridLayout"
+                                                                        labelSpanXL="4"
+                                                                        labelSpanL="4"
+                                                                        labelSpanM="4"
+                                                                        labelSpanS="12"
+                                                                        adjustLabelSpan="false"
+                                                                        emptySpanXL="1"
+                                                                        emptySpanL="1"
+                                                                        emptySpanM="1"
+                                                                        emptySpanS="0"
+                                                                        columnsXL="1"
+                                                                        columnsL="1"
+                                                                        columnsM="1"
+                                                                        singleContainerFullSize="false"
+                                                                >
+                                                                <f:content>
+                                                                        <Label text="Host" />
+                                                                        <Input
+                                                                                id="SystemHost"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+
+                                                                        <Label text="Port" />
+                                                                        <Input
+                                                                                id="SystemPort"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+                                                                        <Label text="User" />
+                                                                        <Input
+                                                                                id="SystemUser"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+                                                                        <Label text="Password" />
+                                                                        <Input
+                                                                                id="SystemPassword"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+                                                                        <Label text="Connections Discovery" />
+                                                                        <Input
+                                                                                id="SystemCondis"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+                                                                        <Label text="ConDis Password" />
+                                                                        <Input
+                                                                                id="SystemCondisPassword"
+                                                                                class="sapUiSmallMarginBottom"
+                                                                                >
+                                                                        </Input>
+
+                                                                        <Button text="Add System" press="onPressUpdateUserSystem" type="Emphasized"/>
                                                                 </f:content>
                                                                 </f:SimpleForm>
                                                         </VBox>
@@ -8916,6 +8982,31 @@
                                 var aData = jQuery.ajax({
                                         type : "POST",
                                         url : "/user_tokens",
+                                        dataType : "json",
+                                        async : false,
+                                        data : UPDATE,
+                                        success : function(data,textStatus, jqXHR) {
+                                            oModel.setData({modelData : data});
+                                            MessageToast.show("Update Success");
+                                        }
+                                });
+                        },
+
+                        onPressUpdateUserSystem : function() {
+
+                                var UPDATE = {}
+
+                                UPDATE['host'] = this.byId("SystemHost").getValue();
+                                UPDATE['port'] = this.byId("SystemPort").getValue();
+                                UPDATE['user'] = this.byId("SystemUser").getValue();
+                                UPDATE['password'] = this.byId("SystemPassword").getValue();
+                                UPDATE['userCondis']   = this.byId("SystemCondis").getValue();
+                                UPDATE['pswdCondis'] = this.byId("SystemCondisPassword").getValue();
+
+                                var oModel = new sap.ui.model.json.JSONModel();
+                                var aData = jQuery.ajax({
+                                        type : "POST",
+                                        url : "/user_systems",
                                         dataType : "json",
                                         async : false,
                                         data : UPDATE,

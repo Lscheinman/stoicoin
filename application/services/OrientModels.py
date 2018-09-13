@@ -26,7 +26,7 @@ class OrientModel():
         self.HDB  = HDB
         self.client = pyorient.OrientDB("localhost", 2424)
         self.session_id = self.client.connect(self.user, self.pswd) 
-        self.Verbose = True
+        self.Verbose = False
         self.entities = ['Person', 'Object', 'Location', 'Event']
         self.reltypes = ['AccountCreated', 'AnalysisToSupport', 'BornOn', 'BornIn', 'ChargedWith', 'CollectionToSupport', 
                          'CommittedCrime', 'CreatedAt', 'CreatedBy', 'CreatedOn', 'DocumentIn', 'DocumentMentioning', 'DocumentedBy',
@@ -515,15 +515,14 @@ class OrientModel():
         if P_GEN == None:
             P_GEN = 'U'
 
-        P_FNAME = (P_FNAME.replace("'", ""))[:60]
+        P_FNAME = (P_FNAME.replace("'", "").replace("\n", ""))[:60]
         P_LNAME = (P_LNAME.replace("'", ""))[:60]        
         P_GEN = P_GEN.strip()
         P_ORIGINREF = ("%s%s%s%s%s%s" % (P_FNAME, P_LNAME, P_GEN, P_DOB, P_POB, P_ORIGIN)).replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '').replace("-", "")[:2000]
         P_GUID, exists = self.EntityResolve({'TYPE' : 'Person', 'LOOKUP' : '%s' % P_ORIGINREF})
         if exists == 0:
-            sql = '''create vertex Person set GUID = '%s', GEN = '%s', FNAME = '%s', LNAME = '%s', 
-            DOB = '%s', POB = '%s', ORIGIN = '%s', ORIGINREF = '%s', 
-            LOGSOURCE = '%s' ''' % (P_GUID, P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE) 
+            sql = '''create vertex Person set GUID = '%s', GEN = '%s', FNAME = '%s', LNAME = '%s', DOB = '%s', POB = '%s', ORIGIN = '%s', ORIGINREF = '%s', LOGSOURCE = '%s' ''' % (P_GUID, P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE) 
+            print(sql)
             self.client.command(sql)
             
             if self.HDB != None:
@@ -645,7 +644,6 @@ class OrientModel():
                     self.HDB.insertODBEvent(E_GUID, E_TYPE, E_CATEGORY, E_DESC, E_LANG, E_CLASS1, E_TIME, E_DATE, E_DTG, E_XCOORD, E_YCOORD, E_ORIGIN, E_ORIGINREF, E_LOGSOURCE)
                 except:
                     pass
-        print("!!!EVENT: %s %s %s" % (E_DATE, E_TIME, E_DESC))
         return E_GUID  
     
     def insertLocation(self, L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1, L_ORIGIN, L_ORIGINREF, L_LOGSOURCE):
@@ -690,7 +688,8 @@ class OrientModel():
         check = self.client.command(sql)
         if len(check) == 0:
             sql = ''' create edge %s from (select from %s where GUID = %s) to (select from %s where GUID = %s) ''' % (TYPE, SOURCETYPE, SOURCEGUID, TARGETTYPE, TARGETGUID)
-            print(sql)
+            if self.Verbose == True:
+                print(sql)
             self.client.command(sql)
             
             if self.HDB != None:

@@ -17,28 +17,21 @@ class HANAModel():
     def __init__(self):
         
         if '\\' in os.getcwd():
-            try:
-                auth = '%s\\application\\services\\config\\AUTH_HANA_GIP.json' % (os.getcwd())
-                self.BaseBook = '%s\\application\\services\\data\\BaseBook.xlsx' % (os.getcwd())
-                self.SocialPath = '%s\\application\\services\\data\\Social.csv' % (os.getcwd())
-                keys = json.loads(open(auth).read())
-            except:
-                auth = '%s\\config\\AUTH_HANA_GIP.json' % (os.getcwd())
-                self.BaseBook = '%s\\data\\BaseBook.xlsx' % (os.getcwd())
-                self.SocialPath = '%s\\data\\Social.csv' % (os.getcwd())
-                keys = json.loads(open(auth).read())
+            auth = '%s\\application\\services\\config\\AUTH_HANAg.json' % (os.getcwd())
+            self.BaseBook = '%s\\application\\services\\data\\BaseBook.xlsx' % (os.getcwd())
+            self.SocialPath = '%s\\application\\services\\data\\Social.csv' % (os.getcwd())
         else:
             try:
-                auth = '%s/services/config/AUTH_HANA_GIP.json' % (os.getcwd())
+                auth = '%s/services/config/AUTH_HANA.json' % (os.getcwd())
                 self.BaseBook   = '%s/services/data/BaseBook.xlsx' % (os.getcwd()) # debugging line
                 self.SocialPath = '%s/services/data/Social.csv' % (os.getcwd())
-                keys = json.loads(open(auth).read())
+                
             except:
-                auth = '%s/config/AUTH_HANA_GIP.json' % (os.getcwd())
+                auth = '%s/config/AUTH_HANA.json' % (os.getcwd())
                 self.BaseBook   = '%s/data/BaseBook.xlsx' % (os.getcwd()) # debugging line 
                 self.SocialPath   = '%s/data/Social.csv' % (os.getcwd()) # debugging line 
-                keys = json.loads(open(auth).read())
         
+        keys = json.loads(open(auth).read())
         self.cursor     = None
         self.Live       = False
         self.host       = keys['host']
@@ -2187,7 +2180,6 @@ class HANAModel():
             Node['TA_OFFSET']    = t[12]
             Node['GUID']         = 0
             View.append(Node)
-            print("[%s_HDB-TextAnalytics]: Node" % (Node))
             
         # set up iterators to determine where TA results should have relations
         curSent = 1
@@ -5349,7 +5341,8 @@ SOURCETYPE = 'Object'
 TYPE = 'o'
 TARGETGUID = 0
 TARGETTYPE = 'Event'
-#HDB = HANAModel()
+
+HDB = HANAModel()
 #HDB.goLive()
 #HDB.SPF_FOCUS_TB_IR_PERSON_INVOLVED()
 
