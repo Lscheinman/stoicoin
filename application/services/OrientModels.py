@@ -203,22 +203,25 @@ class OrientModel():
 
         return User
 
-    def get_ta_runs(self):
-        sql = '''
-        select GUID, CLASS1, E_DESC from Event where CATEGORY = 'TEXT_ANALYTICS'
-        '''
-        Q = self.client.command(sql)
-        results = []
-        for e in Q:
-            e = e.oRecordData
-            r = {}
-            r['GUID'] = e['GUID']
-            r['CATEGORY'] = e['CLASS1']
-            r['DESC'] = str(e['E_DESC'])
-            if r not in results:
-                results.append(r)
+    def get_ta_runs(self, uaa):
 
-        return results
+        TARUNS = []
+        sql = '''select CATEGORY, GUID, O_CLASS1, O_CLASS2, O_CLASS3, TYPE, O_DESC, LOGSOURCE from Object WHERE ORIGIN = 'HANA_POLER_INDEX' order by O_DESC '''
+        r = self.client.command(sql)
+        for e in r:
+            d = {}
+            e = e.oRecordData
+            class1 = str(e['O_CLASS1'])[:10]
+            d['NAME'] = e['CATEGORY'] + ' ' + e['TYPE']
+            d['DESC'] = class1 + ' ' + e['O_DESC'] + ' ' + e['O_CLASS3']
+            d['GUID'] = e['GUID']
+            if isinstance(d['NAME'], str) == False:
+                d['NAME'] == str(d['NAME'])
+            if e['LOGSOURCE'] in uaa:
+                TARUNS.append(d)
+
+        TARUNS = sorted(TARUNS, key=lambda i: i['NAME'].lower())
+        return TARUNS
 
     def getResponse(self, url, auth):
 
@@ -284,11 +287,6 @@ class OrientModel():
 
         result = {'VAL' : False, 'GUID' : GUID}
 
-        sql = ''' select *, OUT().GUID, IN().GUID from %s where GUID = %s ''' % (TYPE, GUID)
-        if self.Verbose == True:
-            print('get_entity %s' % sql)
-        r = self.client.command(sql)[0].oRecordData
-
         if str(GUID)[0] == '1':
             TYPE = 'Person'
         if str(GUID)[0] == '2':
@@ -297,8 +295,12 @@ class OrientModel():
             TYPE = 'Location'
         if str(GUID)[0] == '4':
             TYPE = 'Event'
-        print(GUID, TYPE)
 
+        sql = ''' select *, OUT().GUID, IN().GUID from %s where GUID = %s ''' % (TYPE, GUID)
+        if self.Verbose == True:
+            print('get_entity %s' % sql)
+        print("!!!!%s" % sql)
+        r = self.client.command(sql)[0].oRecordData
         if TYPE == 'Person':
 
             result['NAME']     = r['FNAME'] + ' ' + r['LNAME']
@@ -353,6 +355,8 @@ class OrientModel():
         else:
             return None
 
+        print("!!%s" % result)
+
         result['Relations'], result['pRelCount'], result['oRelCount'], result['lRelCount'], result['eRelCount'] = self.get_entity_relations(GUID, TYPE)
 
 
@@ -370,11 +374,12 @@ class OrientModel():
         eRelCount = 0
 
         sql = ''' match {class: %s, as: u, where: (GUID = %d)}.both() {class: V, as: e } return $elements''' % (TYPE, GUID)
-
+        print("!!!%s" % sql)
         run = self.client.command(sql)
         GUIDs = []
         for r in run:
             r = r.oRecordData
+            print(r)
             if r['GUID'] != str(GUID):
                 for key in r.keys():
                     if key[0:3] == 'in_' or key[0:4] == 'out_':
@@ -1250,7 +1255,8 @@ class OrientModel():
         menu['VULCHILD'] = self.Graph_VP_CHILDREN(1, 7)
         menu['VULADULT'] = self.Graph_VP_CHILDREN(1, 5)
         menu['VulChildCount'] = len(menu['VULCHILD'])
-        menu['TARUNS']   = self.get_ta_runs()
+        menu['TARUNS']   = self.get_ta_runs(uaa)
+        menu['TARUNS'].append({'NAME' : '_NA_', 'GUID' : 0})
 
         sql = '''
         select GUID, ORIGIN, XCOORD, YCOORD, LOGSOURCE from Location order by ORIGIN
@@ -1330,9 +1336,10 @@ class OrientModel():
                 d['NAME'] == str(d['NAME'])
             if e['LOGSOURCE'] in uaa:
                 menu['OBJECTS'].append(d)
-            
+
         menu['OBJECTS'].append({'NAME' : '_NA_', 'GUID' : 0})
         menu['OBJECTS'] = sorted(menu['OBJECTS'], key=lambda i: i['NAME'].lower())
+
 
         sql = '''select DTG, GUID, E_DESC, LOGSOURCE from Event order by DTG DESC '''
         r = self.client.command(sql)
