@@ -5486,33 +5486,104 @@
         xmlns:vbm="sap.ui.vbm"
         height="100%" displayBlock="true"
         >
-        <SplitApp id="SplitAppDemo" initialDetail="DashboardViews" initialMaster="DashboardLinks" orientationChange="onOrientationChange">
+        <SplitApp id="SplitAppDemo" initialDetail="ReportViewer" initialMaster="DashboardLinks" orientationChange="onOrientationChange">
                 <detailPages>
-                <!--REQUIREMENTS-->
-                        <Page id="DashboardViews" title="Dashboard views" class="sapUiStdPage" showNavButton="true"
+                        <Page id="ReportBuilder" title="Disseminate Intelligence" class="sapUiStdPage" showNavButton="true"
+                                navButtonText="Back" navButtonPress="onPressNavToDashboardLinks">
+
+                            <f:SimpleForm layout="ResponsiveGridLayout" title="Report Header">
+                            <f:content>
+                            <HBox class="sapUiSmallMargin">
+                              <VBox class="sapUiSmallMargin">
+                                  <Label text="Report Type" />
+                                  <Select id="ReportBuild-Type" >
+                                          <items>
+                                                  <core:Item text="All Source" key="1"/>
+                                                  <core:Item text="Investigation" key="2"/>
+                                                  <core:Item text="Open Source" key="3"/>
+                                                  <core:Item text="Strategy Support" key="4"/>
+                                                  <core:Item text="Signals Intelligence" key="5"/>
+                                          </items>
+                                  </Select>
+                              </VBox>
+                              <VBox class="sapUiSmallMargin">
+                                  <Label text="Report Title" />
+                                  <Input
+                                          id="ReportBuild-Title"
+                                          class="sapUiSmallMarginBottom">
+                                  </Input>
+                              </VBox>
+                              <VBox class="sapUiSmallMargin">
+                                  <Label text="Classification" />
+                                  <Select id="ReportBuild-Classification" >
+                                          <items>
+                                                  <core:Item text="Unclassified" key="A1"/>
+                                                  <core:Item text="Confidential" key="B1"/>
+                                                  <core:Item text="Secret" key="C1"/>
+                                                  <core:Item text="Top Secret" key="D1"/>
+                                                  <core:Item text="Speical Access" key="EE"/>
+                                          </items>
+                                  </Select>
+                              </VBox>
+                              <VBox class="sapUiSmallMargin">
+                                  <Label text="Requirements (PIR)" />
+                                  <MultiComboBox id="ReportBuild-PIR" >
+                                          <items>
+                                          </items>
+                                  </MultiComboBox>
+                              </VBox>
+                            </HBox>
+                            </f:content>
+                            </f:SimpleForm>
+                            <f:SimpleForm layout="ResponsiveGridLayout" title="Related entities and content">
+                            <f:content>
+                            <HBox class="sapUiSmallMargin">
+                              <VBox class="sapUiSmallMargin">
+                                  <Label text="Persons" />
+                                  <MultiComboBox id="ReportBuild-Persons" >
+                                          <items>
+                                          </items>
+                                  </MultiComboBox>
+                              </VBox>
+                              <VBox class="sapUiSmallMargin">
+                                  <Label text="Objects" />
+                                  <MultiComboBox id="ReportBuild-Objects" >
+                                          <items>
+                                          </items>
+                                  </MultiComboBox>
+                              </VBox>
+                              <VBox class="sapUiSmallMargin">
+                                  <Label text="Locations" />
+                                  <MultiComboBox id="ReportBuild-Locations" >
+                                          <items>
+                                          </items>
+                                  </MultiComboBox>
+                              </VBox>
+                              <VBox class="sapUiSmallMargin">
+                                  <Label text="Events" />
+                                  <MultiComboBox id="ReportBuild-Events" >
+                                          <items>
+                                          </items>
+                                  </MultiComboBox>
+                              </VBox>
+                            </HBox>
+                            </f:content>
+                            </f:SimpleForm>
+                            <HBox class="sapUiSmallMargin">
+                            <Button icon="sap-icon://add" press="onPressBuildReport" type="Accept" text="Publish"/>
+                            <Button icon="sap-icon://decline" press="onPressClearReport" type="Reject" text="Cancel"/>
+                            </HBox>
+                            <l:VerticalLayout id="ReportBuild-Content" class="sapUiContentPadding" width="100%"></l:VerticalLayout>
+                        </Page>
+                        <Page id="ReportViewer" title="Disseminate Intelligence" class="sapUiStdPage" showNavButton="true"
                                 navButtonText="Back" navButtonPress="onPressNavToDashboardLinks">
                                 <VBox class="sapUiSmallMargin">
-                                        <f:SimpleForm id="FORMDIR"
-                                                editable="true"
-                                                layout="ResponsiveGridLayout"
-                                                title="Applications"
-                                                labelSpanXL="4"
-                                                labelSpanL="4"
-                                                labelSpanM="4"
-                                                labelSpanS="12"
-                                                adjustLabelSpan="false"
-                                                emptySpanXL="1"
-                                                emptySpanL="1"
-                                                emptySpanM="1"
-                                                emptySpanS="0"
-                                                columnsXL="1"
-                                                columnsL="1"
-                                                columnsM="1"
-                                                singleContainerFullSize="false"
-                                        >
-                                        <f:content>
-                                        </f:content>
-                                        </f:SimpleForm>
+                                    <Label text="Available Reports" />
+                                    <Select id="ReportView-Available" >
+                                            <items>
+                                                    <core:Item text="Unclassified" key="A1"/>
+                                            </items>
+                                    </Select>
                                 </VBox>
                         </Page>
                 </detailPages>
@@ -5524,7 +5595,8 @@
                                         <List>
                                                 <items>
                                                         <StandardListItem title="Connections Discovery" type="Navigation" press="onPressNavToConDis"/>
-                                                        <StandardListItem title="Investigative Case Management" type="Navigation" press="onPressNavToStrategies"/>
+                                                        <StandardListItem title="Report Viewer" type="Navigation" press="onPressNavToViewReports"/>
+                                                        <StandardListItem title="Report Builder" type="Navigation" press="onPressNavToBuildReports"/>
                                                         <StandardListItem title="Digital Boardroom" type="Navigation" press="onPressNavToRecents"/>
                                                 </items>
                                         </List>
@@ -5547,7 +5619,8 @@
                         'sap/ui/model/Filter',
                         'sap/ui/model/json/JSONModel',
                         "sap/ui/vbm/AnalyticMap",
-                ], function(jQuery, MessageToast, Fragment, Controller, Filter, JSONModel, AnalyticMap, Device) {
+                        'sap/ui/richtexteditor/RichTextEditor'
+                ], function(jQuery, MessageToast, Fragment, Controller, Filter, JSONModel, AnalyticMap, Device, RTE) {
                 "use strict";
 
 
@@ -5711,6 +5784,24 @@
                         onPressNavToConDis : function(oEvent) {
 
                                 window.open("https://lt5111.wdf.sap.corp:51034/condis/index.html");
+
+                        },
+
+                        onPressNavToBuildReports : function(RTE) {
+                                this.getSplitAppObj().to(this.createId("ReportBuilder"));
+                                MessageToast.show("Build reports from existing entities.");
+
+                                var oRichTextEditor = new sap.ui.richtexteditor.RichTextEditor({
+                                        editorType: sap.ui.richtexteditor.EditorType.TinyMCE4,
+                                        width: "100%",
+                                        height: "600px",
+                                        customToolbar: true,
+                                        showGroupFont: true,
+                                        showGroupLink: true,
+                                        showGroupInsert: true
+                                      });
+                                this.getView().byId("ReportBuild-Content").addContent(oRichTextEditor);
+                                sap.ui.getCore().applyChanges();
 
                         },
 
