@@ -280,6 +280,14 @@ class HANAModel():
         self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'BO2', 'BornIn');'''
         self.curCondis.execute(sql)
+        sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'CA1', 'Called');'''
+        self.curCondis.execute(sql)
+        sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'CA2', 'CalledBy');'''
+        self.curCondis.execute(sql)
+        sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'CA3', 'Canceled');'''
+        self.curCondis.execute(sql)    
+        sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'CA4', 'CanceledBy');'''
+        self.curCondis.execute(sql)           
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'CH1', 'ChargedWith');'''
         self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'CO1', 'CollectionToSupport');'''
@@ -334,6 +342,8 @@ class HANAModel():
         self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'PA1', 'PartOf');'''
         self.curCondis.execute(sql)
+        sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'PH1', 'PhotoOf');'''
+        self.curCondis.execute(sql)        
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'PR1', 'ProcessedIntel');'''
         self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'PU1', 'Published');'''
@@ -350,12 +360,16 @@ class HANAModel():
         self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'RE4', 'RecordedBy');'''
         self.curCondis.execute(sql)
+        sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'RE5', 'Related');'''
+        self.curCondis.execute(sql)        
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'SE1', 'Searched');'''
         self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'SU1', 'SubjectofContact');'''
         self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'SU2', 'Supporting');'''
         self.curCondis.execute(sql)
+        sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'SU3', 'Subjectof');'''
+        self.curCondis.execute(sql)        
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'TA1', 'Tagged');'''
         self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'TA2', 'TaskedTo');'''
@@ -368,6 +382,8 @@ class HANAModel():
         self.curCondis.execute(sql)
         sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'TW2', 'TweetLocation');'''
         self.curCondis.execute(sql)
+        sql = '''INSERT INTO "CONDIS_SCHEMA"."com.sap.condis::content.TT_RELATION" VALUES ('en', 'WI1', 'Witnessed');'''
+        self.curCondis.execute(sql)        
 
     def initialize_reset(self):
 

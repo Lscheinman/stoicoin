@@ -173,11 +173,11 @@ class OsintTwitter():
             self.timestamp
             )
         O_CLASS1 = tweet['user']['screen_name']
-        O_CLASS2 = tweet['user']['followers_count']
-        O_CLASS3 = tweet['user']['friends_count']
+        O_CLASS2 = int(tweet['user']['followers_count']) + int(tweet['user']['friends_count'])
+        O_CLASS3 = '%s' % tweet['user']['profile_image_url']
         O_ORIGIN = time.strftime('%Y-%m-%d %H:%M:%S', time.strptime(tweet['user']['created_at'],'%a %b %d %H:%M:%S +0000 %Y'))
         O_ORIGINREF = "Twitter%s-%s" % (tweet['user']['id'], tweet['user']['url'])
-        O_LOGSOURCE = '%s' % tweet['user']['profile_image_url']
+        O_LOGSOURCE = 'B1'
 
         entity = {'TYPE' : 'Object', 'LOOKUP' : '%s%s%s%s' % (O_ORIGIN, O_ORIGINREF, O_TYPE, O_CATEGORY)}
         O_GUID, found = self.DB.EntityResolve(entity)
@@ -195,7 +195,7 @@ class OsintTwitter():
             E_DTG  = ('%s%s' % (E_TIME, E_DATE)).replace(":", "").replace("-", "")
             E_ORIGIN = tweet['user']['screen_name']
             E_ORIGINREF = "Twitter%s-%s" % (tweet['user']['id'], tweet['user']['url'])
-            E_LOGSOURCE = '%s' % tweet['user']['time_zone']
+            E_LOGSOURCE = 'B1'
             E_XCOORD = XCOORD
             E_YCOORD = YCOORD
             E_LANG = tweet['lang']
@@ -219,7 +219,7 @@ class OsintTwitter():
         E_DTG  = ('%s%s' % (E_TIME, E_DATE)).replace(":", "").replace("-", "")
         E_ORIGIN = tweet['user']['screen_name']
         E_ORIGINREF = "Twitter%s-%s" % (tweet['user']['id'], tweet['id'])
-        E_LOGSOURCE = '%s' % tweet['user']['profile_image_url']
+        E_LOGSOURCE = 'B1'
         E_XCOORD = XCOORD
         E_YCOORD = YCOORD
         E_LANG = tweet['lang']
@@ -261,11 +261,11 @@ class OsintTwitter():
             user['time_zone']
             )
         O_CLASS1 = user['screen_name']
-        O_CLASS2 = user['followers_count']
-        O_CLASS3 = user['friends_count']
+        O_CLASS2 = int(user['followers_count']) + nt(user['friends_count'])
+        O_CLASS3 = '%s' % user['profile_image_url'] 
         O_ORIGIN = time.strftime('%Y-%m-%d %H:%M:%S', time.strptime(user['created_at'],'%a %b %d %H:%M:%S +0000 %Y'))
         O_ORIGINREF = "Twitter%s-%s" % (user['id'], user['url'])
-        O_LOGSOURCE = '%s' % user['profile_image_url']
+        O_LOGSOURCE = 'B1'
 
         entity = {'TYPE' : 'Object', 'LOOKUP' : '%s%s%s%s' % (O_ORIGIN, O_ORIGINREF, O_TYPE, O_CATEGORY)}
         O_GUID, found = self.DB.EntityResolve(entity)
@@ -283,7 +283,7 @@ class OsintTwitter():
             E_DTG  = ('%s%s' % (E_TIME, E_DATE)).replace(":", "").replace("-", "")
             E_ORIGIN = user['screen_name']
             E_ORIGINREF = "Twitter%s-%s" % (user['id'], user['url'])
-            E_LOGSOURCE = '%s' % user['time_zone']
+            E_LOGSOURCE = 'B1'
             E_XCOORD = XCOORD
             E_YCOORD = YCOORD
 

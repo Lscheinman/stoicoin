@@ -29,13 +29,13 @@ class OrientModel():
         self.session_id = self.client.connect(self.user, self.pswd)
         self.Verbose = False
         self.entities = ['Person', 'Object', 'Location', 'Event']
-        self.reltypes = ['AccountCreated', 'AnalysisToSupport', 'BornOn', 'BornIn', 'ChargedWith', 'CollectionToSupport',
-                         'CommittedCrime', 'CreatedAt', 'CreatedBy', 'CreatedOn', 'DocumentIn', 'DocumentMentioning', 'DocumentedBy',
+        self.reltypes = ['AccountCreated', 'AnalysisToSupport', 'BornOn', 'BornIn', 'Called', 'CalledBy', 'Canceled', 'CanceledBy',
+                         'ChargedWith', 'CollectionToSupport', 'CommittedCrime', 'CreatedAt', 'CreatedBy', 'CreatedOn', 'DocumentIn', 'DocumentMentioning', 'DocumentedBy',
                          'Family', 'Follows', 'Found', 'FromFile', 'HasAttribute', 'HasStatus', 'IncludesTag', 'Involves', 'Knows',
-                         'LivesAt', 'LocatedAt', 'ModifiedBy', 'ModifiedOn', 'OfType', 'On', 'OccurredAt', 'Owns', 'PartOf',
-                         'ProcessedIntel', 'Published', 'PublishedIntel', 'PublishedTask', 'ReportedAt', 'RegisteredOn', 'ReferenceLink',
-                         'RecordedBy', 'Searched', 'SubjectofContact', 'Supporting', 'Tagged', 'TaskedTo', 'TA_Reference', 'TextAnalytics',
-                         'TweetLocation', 'Tweeted', 'TA_REFERENCE_SAME_SENTENCE']
+                         'LivesAt', 'LocatedAt', 'ModifiedBy', 'ModifiedOn', 'OfType', 'On', 'OccurredAt', 'Owns', 'PartOf', 'PhotoOf',
+                         'ProcessedIntel', 'Published', 'PublishedIntel', 'PublishedTask', 'Related', 'ReportedAt', 'RegisteredOn', 'ReferenceLink',
+                         'RecordedBy', 'Searched', 'SubjectOf', 'SubjectofContact', 'Supporting', 'Tagged', 'TaskedTo', 'TA_Reference', 'TextAnalytics',
+                         'TweetLocation', 'Tweeted', 'TA_REFERENCE_SAME_SENTENCE', 'Witnessed']
         self.setDemoDataPath()
         # If the POLER schema doesn't exist create it
         try:
@@ -751,10 +751,12 @@ class OrientModel():
             P_GUID = self.insertPerson(P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE, P_LOGSOURCE)
             E_GUID = self.insertEvent('Birth', 'Human', '%s %s born on %s' % (P_FNAME, P_LNAME, P_DOB), 'eng', TS,
                                      '12:00:00', P_DOB, '%s120000' % P_DOB, XCOORD, YCOORD,  P_ORIGIN, P_ORIGINREF,  P_LOGSOURCE)
+            O_GUID = self.insertObject('Photo', 'Person', '%s %s' % (P_FNAME, P_LNAME), P_FNAME, P_LNAME, "'/static/%s'" % row['complexion'], 'Wikipedia', P_ORIGINREF, A1)
             L_GUID = self.insertLocation('City', P_POB, XCOORD, YCOORD, '0', TS, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE)
             self.insertRelation(P_GUID, 'Person', 'BornOn', E_GUID, 'Event')
             self.insertRelation(E_GUID, 'Event', 'OccurredAt', L_GUID, 'Location')
             self.insertRelation(P_GUID, 'Person', 'BornIn', L_GUID, 'Location')
+            self.insertRelation(O_GUID, 'Object', 'PhotoOf', P_GUID, 'Person')
 
         print("People complete")
 
@@ -1315,7 +1317,7 @@ class OrientModel():
         menu['PERSONS'].append({'NAME' : '_NA_', 'GUID' : 0})
         menu['PERSONS'] = sorted(menu['PERSONS'], key=lambda i: i['NAME'].lower())
 
-        sql = '''select CATEGORY, GUID, O_CLASS1, O_CLASS2, O_CLASS3, TYPE, O_DESC, LOGSOURCE from Object WHERE TYPE != 'User' order by O_DESC '''
+        sql = '''select CATEGORY, GUID, O_CLASS1, O_CLASS2, O_CLASS3, TYPE, O_DESC, LOGSOURCE from Object WHERE TYPE != 'User' and ORIGIN != 'HANA_POLER_INDEX' order by O_DESC '''
         r = self.client.command(sql)
         for e in r:
             d = {}
@@ -1328,6 +1330,7 @@ class OrientModel():
                 d['NAME'] == str(d['NAME'])
             if e['LOGSOURCE'] in uaa:
                 menu['OBJECTS'].append(d)
+            
         menu['OBJECTS'].append({'NAME' : '_NA_', 'GUID' : 0})
         menu['OBJECTS'] = sorted(menu['OBJECTS'], key=lambda i: i['NAME'].lower())
 

@@ -6554,7 +6554,7 @@
                                                                         new sap.m.Text({text : "{DESC}"}),
                                                                         new sap.m.Text({text : "{CLASS1}"}),
                                                                         new sap.m.Text({text : "{CLASS2}"}),
-                                                                        new sap.m.Image({src : "{CLASS3}"}),
+                                                                        new sap.m.Image({src : "{DATE}", width : "100px"}),
                                                                         new sap.m.Text({text : "{RELTYP}"})
                                                                         ]
                                                         });
@@ -8032,8 +8032,12 @@
                                         dataType : "json",
                                         async : false,
                                         data : StoredProcedure,
-                                        success : function(data, textStatus, jqXHR) {
-                                                MessageToast.show(data['messages'][0]);
+                                        success : function(response, textStatus, jqXHR) {
+                                                var oModel = new sap.ui.model.json.JSONModel(response['data']);
+                                                sap.ui.getCore().setModel(oModel, "MENUS");
+                                                sap.ui.getCore().getModel("MENUS").refresh();
+                                                MessageToast.show(response['messages'][0]);
+
                                         }
                                 });
 

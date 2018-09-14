@@ -491,6 +491,7 @@ class User:
             MSG['messages'].append(self.ODB.preLoadPeople())
         elif StoredProcedureType == Reset:
             MSG['messages'].append(self.ODB.initialize_reset())
+            MSG['data'] = self.menus()
         elif StoredProcedureType == SPF:
             MSG['messages'].append(self.ODB.SPF_Run_Full())
 
