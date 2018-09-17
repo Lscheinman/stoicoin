@@ -182,16 +182,16 @@ class User:
 
         return self.ODB.get_task(GUID)
 
-    def get_entity_profile(self, GUID, TYPE):
+    def get_entity_profile(self, GUID):
+        # TODO adding profile report and network
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-        print("[%s_APP-Model-get_entity]: Getting entity profile: GUID:%s TYPE:%s" % (TS, GUID, TYPE))
+        print("[%s_APP-Model-get_entity]: Getting entity profile: GUID:%s" % (TS, GUID))
         ProfilePageSize = 100
-        Profile = {'ProfileType' : TYPE}
-
-        Profile['Profile'] = self.ODB.get_entity(GUID, TYPE)
+        Profile = {}
+        Profile['Profile'] = self.ODB.get_entity(GUID)
         if Profile['Profile']:
             if 'Relations' not in Profile.keys():
-                Profile['Relations'], Profile['pRelCount'], Profile['oRelCount'], Profile['lRelCount'], Profile['eRelCount'] = self.ODB.get_entity_relations(GUID, TYPE)
+                Profile['Relations'], Profile['pRelCount'], Profile['oRelCount'], Profile['lRelCount'], Profile['eRelCount'] = self.ODB.get_entity_relations(GUID, Profile['Profile']['ProfileType'])
             Profile['TotalRel'] = len(Profile['Relations'])
             Profile['Person'] = []
             Profile['Object'] = []
@@ -201,7 +201,7 @@ class User:
             i = 0
             print("[%s_APP-Model-get_entity]: Getting relations %s" % (TS, Profile['Relations']))
             for e in Profile['Relations']:
-                entity = self.ODB.get_entity(int(e['GUID']), e['TYPE'].strip())
+                entity = self.ODB.get_entity(int(e['GUID']))
                 if entity:
                     entity['RELTYP'] = e['REL']
                     Profile['%s' % e['TYPE']].append(entity)
@@ -214,12 +214,13 @@ class User:
                 Profile['Profile']['DESC'] = Profile['Profile']['DESC']  + '\nShowing first %d.' % ProfilePageSize
 
 
+
         return Profile
 
     def get_VP_entity_profile(self, GUID, TYPE, spath, epath):
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         print("[%s_APP-Model-get_VP_entity_profile]: Getting entity profile: GUID:%s TYPE:%s paths (%d %d)" % (TS, GUID, TYPE, int(spath), int(epath)))
-        Profile = self.get_entity_profile(GUID, TYPE)
+        Profile = self.get_entity_profile(GUID)
         Profile = self.ODB.Graph_VP_Risks(int(spath), int(epath), GUID, Profile)
 
         return Profile

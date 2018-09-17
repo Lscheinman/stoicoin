@@ -906,7 +906,7 @@ def load_VP_entity_profile():
             result = user.get_VP_entity_profile(int(Profile['GUID'][0]), Profile['TYPE'][0], Profile['LOW'][0], Profile['HIGH'][0])
         else:
             result = user.get_VP_entity_profile(int(Profile['GUID'][0]), Profile['TYPE'][0], 0, 0)
-        print("[%s_APP-View-load_VP_entity_profile]: Complete with: %s\n%s" % (TS, type(result), result))
+        print("[%s_APP-View-load_VP_entity_profile]: Complete with: %s" % (TS, type(result)))
         return jsonify(result)
 
     else:
@@ -920,7 +920,7 @@ def load_entity_profile():
         Profile = request.form.to_dict(flat=False)
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         print("[%s_APP-View-load_entity_profile]: Received: %s %s" % (TS, type(Profile), Profile))
-        result = user.get_entity_profile(int(Profile['GUID'][0]), Profile['TYPE'][0])
+        result = user.get_entity_profile(int(Profile['GUID'][0]))
         return jsonify(result)
 
     else:

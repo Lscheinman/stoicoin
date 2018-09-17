@@ -197,6 +197,7 @@ class OrientModel():
             else:
                 if data not in User['ACTIVITIES']:
                     User['ACTIVITIES'].append(data)
+                    
 
         User['ACTIVITIES'] = sorted(User['ACTIVITIES'], key=lambda i: i['DTG'], reverse=True)
         User['TASKS'] = sorted(User['TASKS'], key=lambda i: i['DTG'], reverse=True)
@@ -283,9 +284,10 @@ class OrientModel():
 
         return task
 
-    def get_entity(self, GUID, TYPE):
+    def get_entity(self, GUID):
 
         result = {'VAL' : False, 'GUID' : GUID}
+        Profile = {}
 
         if str(GUID)[0] == '1':
             TYPE = 'Person'
@@ -297,10 +299,10 @@ class OrientModel():
             TYPE = 'Event'
 
         sql = ''' select *, OUT().GUID, IN().GUID from %s where GUID = %s ''' % (TYPE, GUID)
-        if self.Verbose == True:
-            print('get_entity %s' % sql)
-        print("!!!!%s" % sql)
         r = self.client.command(sql)[0].oRecordData
+        if self.Verbose == True:
+            TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            print("[%s_ODB-get_entity]: Getting %s entity profile for GUID %s:\nSQL:\t%s\nRESULT:\t%s" % (TS, TYPE, GUID, sql, r))         
         if TYPE == 'Person':
 
             result['NAME']     = r['FNAME'] + ' ' + r['LNAME']
@@ -313,6 +315,7 @@ class OrientModel():
             result['DOB']      = str(r['DOB'])
             result['POB']      = r['ORIGIN']
             result['VAL']      = True
+            result['ProfileType'] = 'Person'
 
         elif TYPE == 'Object':
 
@@ -326,6 +329,7 @@ class OrientModel():
             result['DATE']     = str(r['O_CLASS3'] )
             result['ORIGIN']   = r['ORIGIN']
             result['VAL']      = True
+            result['ProfileType'] = 'Object'
 
         elif TYPE == 'Location':
 
@@ -339,6 +343,7 @@ class OrientModel():
             result['DATE']     = result['CLASS1']
             result['ORIGIN']   = r['ORIGIN']
             result['VAL']      = True
+            result['ProfileType'] = 'Location'
 
         elif TYPE == 'Event':
 
@@ -352,16 +357,15 @@ class OrientModel():
             result['DATE']     = str(r['DATE'])
             result['ORIGIN']   = r['ORIGIN']
             result['VAL']  = True
+            result['ProfileType'] = 'Event'
         else:
             return None
 
-        print("!!%s" % result)
-
         result['Relations'], result['pRelCount'], result['oRelCount'], result['lRelCount'], result['eRelCount'] = self.get_entity_relations(GUID, TYPE)
-
 
         if isinstance(result['NAME'], str) == False:
             result['NAME'] == str(result['NAME'])
+            
         return result
 
 
@@ -374,12 +378,10 @@ class OrientModel():
         eRelCount = 0
 
         sql = ''' match {class: %s, as: u, where: (GUID = %d)}.both() {class: V, as: e } return $elements''' % (TYPE, GUID)
-        print("!!!%s" % sql)
         run = self.client.command(sql)
         GUIDs = []
         for r in run:
             r = r.oRecordData
-            print(r)
             if r['GUID'] != str(GUID):
                 for key in r.keys():
                     if key[0:3] == 'in_' or key[0:4] == 'out_':
@@ -1501,7 +1503,6 @@ class OrientModel():
         for e in Q:
             e = e.oRecordData
             R = {}
-            print(e)
             R['DESC']     = str(e['e_E_DESC'])
             R['TYPE']     = str(e['e_TYPE'])
             R['CATEGORY'] = str(e['e_CATEGORY'])

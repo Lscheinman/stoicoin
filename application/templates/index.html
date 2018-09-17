@@ -4035,7 +4035,6 @@
                                                 </items>
                                                 </Table>
                                         </IconTabFilter>
-                                        {% if session.utype in AUTH['USE'] %}
                                         <IconTabFilter
                                                 text="Reports"
                                                 icon="sap-icon://bar-chart">
@@ -4109,7 +4108,6 @@
                                                 <Button id="DeletePersonButton" text="Delete Entity" press="onPressDeleteEntity" type="Reject"/>
                                                 </VBox>
                                         </IconTabFilter>
-                                        {% endif %}
                                 </items>
                                 </IconTabBar>
                         </Page>
@@ -5766,7 +5764,6 @@
                                         async : false,
                                         data : PIR,
                                         success : function(response, textStatus, jqXHR) {
-
                                             oThis.getView().byId("DIRREQ").setValue('');
                                             oThis.getView().byId("DIRTAG").setValue('');
                                             sap.ui.getCore().getModel("MENUS").getProperty("/PIR").push(response);
@@ -7076,9 +7073,10 @@
                                                                 url  : "/load_entity_profile",
                                                                 dataType : "json",
                                                                 data : pData,
+                                                                async : false,
                                                                 success : function(response, textStatus, jqXHR) {
-                                                                        sap.ui.getCore().getModel("MENUS").getProperty("/Pprofile").splice(0,1)
-                                                                        sap.ui.getCore().getModel("MENUS").getProperty("/Pprofile").push(response);
+                                                                        sap.ui.getCore().getModel("MENUS").getProperty("/Tprofile").splice(0,1)
+                                                                        sap.ui.getCore().getModel("MENUS").getProperty("/Tprofile").push(response);
                                                                         sap.ui.getCore().getModel("MENUS").refresh();
                                                                 }
                                                         });
@@ -7088,12 +7086,12 @@
                                                         var oProfileDetailTemplate = new sap.m.Text({text : "{DESC}"});
                                                         var ProfileDescription = oThis.byId("ProfileDescriptionfromTA");
                                                         ProfileDescription.setModel(menuModel);
-                                                        ProfileDescription.bindText("/Pprofile/0/Profile/DESC", oProfileDetailTemplate);
+                                                        ProfileDescription.bindText("/Tprofile/0/Profile/DESC", oProfileDetailTemplate);
 
                                                         var oProfileIDTemplate = new sap.m.Text({text : "{DESC}"});
                                                         var ProfileGUID = oThis.byId("ProfileGUIDfromTA");
                                                         ProfileGUID.setModel(menuModel);
-                                                        ProfileGUID.bindText("/Pprofile/0/Profile/GUID", oProfileIDTemplate);
+                                                        ProfileGUID.bindText("Tprofile/0/Profile/GUID", oProfileIDTemplate);
 
                                                         // RELATED PERSONS
                                                         var oPersonTableTemplate = new sap.m.ColumnListItem({
@@ -7109,7 +7107,7 @@
 
                                                         var RelatedPersons = oThis.byId("RelatedPersonsfromTA");
                                                         RelatedPersons.setModel(menuModel);
-                                                        RelatedPersons.bindAggregation("items", "/Pprofile/0/Person", oPersonTableTemplate);
+                                                        RelatedPersons.bindAggregation("items", "/Tprofile/0/Person", oPersonTableTemplate);
 
                                                         // RELATED OBJECTS
                                                         var oObjectTableTemplate = new sap.m.ColumnListItem({
@@ -7126,7 +7124,7 @@
 
                                                         var RelatedObjects = oThis.byId("RelatedObjectsfromTA");
                                                         RelatedObjects.setModel(menuModel);
-                                                        RelatedObjects.bindAggregation("items", "/Pprofile/0/Object", oObjectTableTemplate);
+                                                        RelatedObjects.bindAggregation("items", "/Tprofile/0/Object", oObjectTableTemplate);
 
 
                                                         // RELATED LOCATIONS
@@ -7144,7 +7142,7 @@
 
                                                         var RelatedLocations = oThis.byId("RelatedLocationsfromTA");
                                                         RelatedLocations.setModel(menuModel);
-                                                        RelatedLocations.bindAggregation("items", "/Pprofile/0/Location", oLocationTableTemplate);
+                                                        RelatedLocations.bindAggregation("items", "/Tprofile/0/Location", oLocationTableTemplate);
 
                                                         // RELATED EVENTS
                                                         var oEventTableTemplate = new sap.m.ColumnListItem({
@@ -7159,28 +7157,28 @@
 
                                                         var RelatedEvents = oThis.byId("RelatedEventsfromTA");
                                                         RelatedEvents.setModel(menuModel);
-                                                        RelatedEvents.bindAggregation("items", "/Pprofile/0/Event", oEventTableTemplate);
+                                                        RelatedEvents.bindAggregation("items", "/Tprofile/0/Event", oEventTableTemplate);
 
                                                         // ENTITY ATTRIBUTES
                                                         var oTypeAttributeLabel= new sap.m.Text({text : "{TYPE}"});
                                                         var EditEntityTypeLabel = oThis.byId("EditEntityTypeLabelfromTA");
                                                         EditEntityTypeLabel.setModel(menuModel);
-                                                        EditEntityTypeLabel.bindText("/Pprofile/0/Profile/TYPE", oTypeAttributeLabel);
+                                                        EditEntityTypeLabel.bindText("/Tprofile/0/Profile/TYPE", oTypeAttributeLabel);
 
                                                         var oCategoryAttributeLabel= new sap.m.Text({text : "{CATEGORY}"});
                                                         var EditEntityCategoryLabel = oThis.byId("EditEntityCategoryLabelfromTA");
                                                         EditEntityCategoryLabel.setModel(menuModel);
-                                                        EditEntityCategoryLabel.bindText("/Pprofile/0/Profile/CATEGORY", oCategoryAttributeLabel);
+                                                        EditEntityCategoryLabel.bindText("/Tprofile/0/Profile/CATEGORY", oCategoryAttributeLabel);
 
                                                         var oClass1AttributeLabel= new sap.m.Text({text : "{CLASS1}"});
                                                         var EditEntityClass1Label = oThis.byId("EditEntityClass1LabelfromTA");
                                                         EditEntityClass1Label.setModel(menuModel);
-                                                        EditEntityClass1Label.bindText("/Pprofile/0/Profile/CLASS1", oClass1AttributeLabel);
+                                                        EditEntityClass1Label.bindText("/Tprofile/0/Profile/CLASS1", oClass1AttributeLabel);
 
                                                         var oClass2AttributeLabel= new sap.m.Text({text : "{CLASS2}"});
                                                         var EditEntityClass2Label = oThis.byId("EditEntityClass2LabelfromTA");
                                                         EditEntityClass2Label.setModel(menuModel);
-                                                        EditEntityClass2Label.bindText("/Pprofile/0/Profile/CLASS2", oClass2AttributeLabel);
+                                                        EditEntityClass2Label.bindText("/Tprofile/0/Profile/CLASS2", oClass2AttributeLabel);
 
                                                 }
                                         });
@@ -7210,8 +7208,6 @@
                                         async : false,
                                         data : sTXT,
                                         success : function(data, textStatus, jqXHR) {
-
-
                                                 var x = 0;
                                                 for (x in data['Person']) {
                                                         var newdata = {'NAME' : data['Person'][x]['NAME'], 'GUID' : data['Person'][x]['GUID']};
@@ -7661,6 +7657,7 @@
 
                                 var menuModel = sap.ui.getCore().getModel("MENUS");
                                 menuModel.setSizeLimit(10000);
+                                sap.ui.getCore().getModel("MENUS").refresh();
 
                                 var oVulChildrenListTemplate = new sap.m.StandardListItem({
                                                 title : "{NAME}",
@@ -7898,6 +7895,7 @@
                                 var VulChildren = this.byId("DetectPatternItems");
                                 VulChildren.setModel(menuModel);
                                 VulChildren.bindAggregation("items", "/VULCHILD", oVulChildrenListTemplate);
+                                sap.ui.getCore().getModel("MENUS").refresh();
 
                         },
 
