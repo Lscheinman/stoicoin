@@ -110,7 +110,8 @@ class POLERmap():
                 i+=1
         self.views.append(view)
         return view, fileURL
-
+    
+    
     def uploadFile(self, uploadURL):
         '''
         STEP 1 as controlled from models:
@@ -118,37 +119,44 @@ class POLERmap():
         For each sheet copy the contents into a dictionary that can be referenced for POLE extraction
         Headers for example will need to be presented in step 2 of POLERmapping
         '''
+        XL = ['csv', 'lsx', 'xls']
         data = []
         headers = [{'dsource' : '', 'attribute' : '', 'sample' : []}]
         for file in os.listdir(uploadURL):
             TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s-PolerService]Found file %s" % (TS, file))
-            wb = load_workbook(filename=uploadURL+file, read_only=False)
-            for ws in wb.sheetnames:
-                view = {}
-                Data = wb[ws]
-                view['Name'] = ws
-                view['Headers'] = [cell.value for cell in Data[1]]
-                for h in view['Headers']:
-                    headers.append({'dsource' : ws,
-                                    'attribute' : h,
-                                    'sample' : []})
-                view['Values'] = []
-                i = 0
-                for row in Data:
-                    values = {'index' : i}
-                    for key, cell in zip(view['Headers'], row):
-                        values[key] = cell.value
-                        for h in headers:
-                            if h['attribute'] == key and h['dsource'] == ws:
-                                if len(h['sample']) < 5:
-                                    if cell.value not in h['sample'] and cell.value != key:
-                                        h['sample'].append(cell.value)
-                    view['Values'].append(values)
-                    i+=1
-                data.append(view)
-
-            self.moveFile('%s%s' % (self.upload, file), '%s%s' % (self.processed, file))
+            print("[%s-PolerService]Found file %s" % (TS, file))            
+            
+            if file[len(file)-2:] == 'py':
+                print("Python File")
+            elif file[len(file)-3:] in XL:
+                wb = load_workbook(filename=uploadURL+file, read_only=False)
+                for ws in wb.sheetnames:
+                    view = {}
+                    Data = wb[ws]
+                    view['Name'] = ws
+                    view['Headers'] = [cell.value for cell in Data[1]]
+                    for h in view['Headers']:
+                        headers.append({'dsource' : ws,
+                                        'attribute' : h,
+                                        'sample' : []})
+                    view['Values'] = []
+                    i = 0
+                    for row in Data:
+                        values = {'index' : i}
+                        for key, cell in zip(view['Headers'], row):
+                            values[key] = cell.value
+                            for h in headers:
+                                if h['attribute'] == key and h['dsource'] == ws:
+                                    if len(h['sample']) < 5:
+                                        if cell.value not in h['sample'] and cell.value != key:
+                                            h['sample'].append(cell.value)
+                        view['Values'].append(values)
+                        i+=1
+                    data.append(view)
+    
+                #self.moveFile('%s%s' % (self.upload, file), '%s%s' % (self.processed, file))
+        
+        
         summary = 'Cols: %s\nRows: %s' % (len(headers), i)
         response = {'status' : 200,
                     'count' : len(headers),
