@@ -7,6 +7,8 @@
 - sudo /opt/orientdb/bin/server.sh
 - Set up the root password
 - Go to the http://xxx.xxx.xxx.xxx:2480 to interact with the studio
+- Press ctrl-c to stop the instance once verified
+- Follow steps on https://orientdb.com/docs/2.2.x/Unix-Service.html to set up Database service
 ### Python
 - sudo apt-get update
 - sudo apt-get install build-essential libssl-dev libffi-dev python3-dev python3-pip nginx python-setuptools
