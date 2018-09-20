@@ -52,16 +52,20 @@ class OrientModel():
             if debugging == False:
                 self.BaseBook   = '%s\\application\\services\\data\\BaseBook.xlsx' % (os.getcwd())
                 self.SocialPath = '%s\\application\\services\\data\\Social.csv' % (os.getcwd())
+                self.Config     = '%s\\application\\services\\config\\' % (os.getcwd())
             else:
                 self.BaseBook   = '%s\\data\\BaseBook.xlsx' % (os.getcwd()) # debugging line
                 self.SocialPath = '%s\\data\\Social.csv' % (os.getcwd()) # debugging line
+                self.Config     = '%s\\config\\' % (os.getcwd())
         else:
             if debugging == False:
                 self.BaseBook   = '%s/application/services/data/BaseBook.xlsx' % (os.getcwd())
                 self.SocialPath = '%s/application/services/data/Social.csv' % (os.getcwd())
+                self.Config     = '%s/application/services/config/' % (os.getcwd())
             else:
                 self.BaseBook   = '%s/data/BaseBook.xlsx' % (os.getcwd()) # debugging line
                 self.SocialPath = '%s/data/Social.csv' % (os.getcwd())
+                self.Config     = '%s/config/' % (os.getcwd())
 
     def shutdown(self):
         self.client.shutdown(self.user, self.pswd)

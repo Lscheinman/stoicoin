@@ -120,6 +120,8 @@ class User:
         self.Ocache = menu['OBJECTS']
         self.Ecache = menu['EVENTS']
         self.Rcache = menu['RELS']
+        
+        menu['MAPS'] = self.POLER.getMaps()
 
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         print("[%s_APP-Model-menus]: %d relations loaded.:" % (TS, len(self.Rcache)))

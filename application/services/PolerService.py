@@ -154,7 +154,8 @@ class POLERmap():
                         i+=1
                     data.append(view)
     
-                #self.moveFile('%s%s' % (self.upload, file), '%s%s' % (self.processed, file))
+                
+                self.moveFile('%s%s' % (self.upload, file), '%s%s' % (self.processed, file))
         
         
         summary = 'Cols: %s\nRows: %s' % (len(headers), i)

@@ -6351,11 +6351,6 @@
                                                                 success : function(response, textStatus, jqXHR) {
                                                                         sap.ui.getCore().getModel("MENUS").getProperty("/Pprofile").splice(0,1)
                                                                         sap.ui.getCore().getModel("MENUS").getProperty("/Pprofile").push(response);
-                                                                        //Cycle through and clean up the links to pictures
-                                                                        var objs = sap.ui.getCore().getModel("MENUS").getProperty("/Pprofile")[0]['Object'];
-                                                                        for ( var i = 0; i < objs.length; i++) {
-                                                                                console.log(objs[i]);
-                                                                                }
                                                                         sap.ui.getCore().getModel("MENUS").refresh();
                                                                 }
                                                         });
@@ -6914,8 +6909,8 @@
 
 
                                 var oMapList = new sap.ui.core.Item({
-                                        key: "{TYPE}",
-                                        text: "{TYPE}"
+                                        key: "{mapname}",
+                                        text: "{mapname}"
                                 });
                                 var MapList  = oThis.byId("POLERIZE-Maps");
                                 MapList.setModel(menuModel);
@@ -8872,6 +8867,8 @@
                                 Rel['CUSTOM'] = oThis.byId("POLERIZE-CustomRelationshipType").getValue();
                                 Rel['T_LABEL'] = oThis.byId("POLERIZE-TargetEntity").getSelectedItem().getKey();
 
+
+
                                 if(Rel['CUSTOM'] != ''){
                                         Rel['R_TYPE'] = Rel['CUSTOM'];
                                 }
@@ -8901,6 +8898,8 @@
                                 var Links = sap.ui.getCore().getModel("MENUS").getProperty("/POLERELS");
                                 var Nodes = sap.ui.getCore().getModel("MENUS").getProperty("/POLENODE");
                                 Map['mapname'] = oThis.byId("POLERIZE-MapName").getValue();
+                                //Update the menus of available maps
+
 
                                 for(var n in Nodes){
                                         var N = {};
