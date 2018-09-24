@@ -112,7 +112,8 @@ class OrientModel():
                 return checkedE_DATE
             except:
                 checkedE_DATE = datetime.strptime('2000-01-01', '%Y-%m-%d')
-                print("[%s_ODB-check_date]: received unknown pattern %s and returned %s." % (TS, E_DATE, checkedE_DATE))
+                if self.Verbose == True:
+                    print("[%s_ODB-check_date]: received unknown pattern %s and returned %s." % (TS, E_DATE, checkedE_DATE))
                 return checkedE_DATE
 
 

@@ -1,8 +1,8 @@
-import nltk, unicodedata, sys, os, string, gensim
+import nltk, unicodedata, sys, os, string, gensim, time
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-
+from datetime import datetime
 from nltk.stem.lancaster import LancasterStemmer
 from tqdm import tqdm
 from random import shuffle, random
@@ -59,7 +59,7 @@ class LabelDoc():
     
     def get_tokenwords_for_new_data(self, path):
         test_text = []
-        df = pd.read_csv(path, delimiter='\n')
+        df = pd.read_csv(path, delimiter='\n', error_bad_lines=False, engine='python')
         dfnp = df.values
         fa = dfnp.flatten('F')
         li = ''.join(fa.tolist())
@@ -126,6 +126,10 @@ class SetData():
     def train_data_with_label(self):
         train_text = []
         tr_words = []
+        
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        print("[%s_DOC-train_data_with_label]: Starting text preparation with tokenization and one hot encoding." % (TS))           
+        
         for cls in self.classes:
             train_data_path = self.lakeURL + cls
             for i in tqdm(os.listdir(train_data_path)):
@@ -142,31 +146,52 @@ class SetData():
                     dlg_tkn = nltk.word_tokenize(dlgs)
                     tr_words.extend(dlg_tkn)
                     train_text.append((dlg_tkn, self.one_hot_classes(cls)))
+                    
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        print("[%s_DOC-train_data_with_label]: Starting stemming process." % (TS))           
         tr_words = [self.stemmer.stem(w.lower()) for w in tr_words]
         tr_words = sorted(list(set(tr_words)))
         shuffle(train_text)
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        print("[%s_DOC-train_data_with_label]: Process complete with %d words." % (TS, len(tr_words)))            
         return train_text, tr_words
     
     def test_data_with_label(self):
         test_text = []
         tst_words = []
+        
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        print("[%s_DOC-test_data_with_label]: Starting text preparation with tokenization and one hot encoding." % (TS))   
+        
         for cls in self.classes:
-            for i in tqdm(os.listdir(self.test_data)):
-                if i != '.DS_Store':
+            for i in tqdm(os.listdir(self.testURL)):
+                if i != '.DS_Store' and i != 'config':
                     path = os.path.join(self.testURL, i)
-                    df = pd.read_csv(path, delimiter='\n')
+                    df = pd.read_csv(path, delimiter='\n', error_bad_lines=False, engine='python')
                     dfnp = df.values
                     fa = dfnp.flatten('F')
-                    li = ''.join(fa.tolist())
+                    try:
+                        li = ''.join(fa.tolist())
+                    except:
+                        li = ''
                     dlgs = self.remove_punctuation(li)
                     dlg_tkn = nltk.word_tokenize(dlgs)
                     tst_words.extend(dlg_tkn)
                     test_text.append((dlg_tkn, self.one_hot_classes(cls)))
+                    
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        print("[%s_DOC-test_data_with_label]: Starting stemming process." % (TS))        
         tst_words = [self.stemmer.stem(w.lower()) for w in tst_words]
         tst_words = sorted(list(set(tst_words)))
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        print("[%s_DOC-test_data_with_label]: Process complete with %d words." % (TS, len(tst_words)))           
         return test_text, tst_words
     
     def bag_of_words(self, data, wrds):
+        
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        print("[%s_DOC-bag_of_words]: Starting process." % (TS))   
+        
         model_data = []
         for i in data:
             bow = []
@@ -178,22 +203,24 @@ class SetData():
                 else:
                     bow.append(0)
             model_data.append([bow, i[1]])
-        return np.array(model_data)
+        
+        model_data = np.array(model_data)
+        TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+        print("[%s_DOC-bag_of_words]: Process complete with %d words." % (TS, len(model_data)))             
     
-    
-            
+        return model_data          
         
 SD = SetData()
 SD.set_classes()
-#SD.set_test_data()
-train_data, tr_words = SD.train_data_with_label()
-test_data, tst_words = SD.test_data_with_label()
+SD.set_test_data()
 
+train_data, tr_words = SD.train_data_with_label()
 training = SD.bag_of_words(train_data, tr_words)
 training_data = list(training[:, 0])
 training_label = list(training[:, 1])
 
-testing = SD.bag_of_words(test_data, tr_words, 'test')
+test_data, tst_words = SD.test_data_with_label()
+testing = SD.bag_of_words(test_data, tr_words)
 testing_data = list(testing[:, 0])
 testing_label = list(testing[:, 1])
 

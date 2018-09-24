@@ -8818,7 +8818,7 @@
                                         if(Nodes[n]['LABEL'] == EntAtt['Entity']){
                                                 //Check between the Custom Value and the Data Source attributes
                                                 if(EntAtt['Custom'] != ''){
-                                                        Nodes[n][EntAtt['Attribute']] = EntAtt['Custom'];
+                                                        Nodes[n][EntAtt['Attribute']] = EntAtt['Custom'] + '*';
                                                 }
                                                 else{
                                                         Nodes[n][EntAtt['Attribute']] = EntAtt['DataSource'];
@@ -8927,6 +8927,11 @@
                                         data : JSON.stringify(Map),
                                         success: function(data, textStatus, jqXHR) {
                                                 MessageToast.show("Rule saved for future extractions");
+                                                var omap = {};
+                                                omap['TYPE'] = data['message'];
+                                                sap.ui.getCore().getModel("MENUS").getProperty("/MAPS/").push(omap);
+                                                sap.ui.getCore().getModel("MENUS").refresh();
+    
                                         }
                                 });
 

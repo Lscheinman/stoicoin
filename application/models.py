@@ -1145,7 +1145,7 @@ class User:
             with open(MapJSON, 'w') as outfile:
                 json.dump(iObj, outfile)
 
-            response = {'status' : 200, 'message' : MapJSON}
+            response = {'status' : 200, 'message' : iObj['mapname']}
 
         elif int(iObj['step']) == 0:
 

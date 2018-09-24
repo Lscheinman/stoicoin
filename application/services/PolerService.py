@@ -122,6 +122,7 @@ class POLERmap():
         XL = ['csv', 'lsx', 'xls']
         data = []
         headers = [{'dsource' : '', 'attribute' : '', 'sample' : []}]
+        print(uploadURL)
         for file in os.listdir(uploadURL):
             TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
             print("[%s-PolerService]Found file %s" % (TS, file))            
@@ -342,14 +343,14 @@ class POLERmap():
                                 found = False
                                 for nE in newE:
                                     if found == False:
-                                        if nE['LABEL'] == e['LABEL']:
-                                            if e['LABEL'][0] == 'p':
+                                        if nE['LABEL'] == e['LABEL'] and k != 'LABEL':
+                                            if e['TYPE'][0].lower()  == 'p':
                                                 nE[k] = row[c]
                                                 found = True
-                                            elif e['LABEL'][0] == 'o':
+                                            elif e['TYPE'][0].lower()  == 'o':
                                                 nE[k] = row[c]
                                                 found = True
-                                            elif e['LABEL'][0] == 'l':
+                                            elif e['TYPE'][0].lower()  == 'l':
                                                 nE[k] = row[c]
                                                 found = True
                                             else:
@@ -357,12 +358,12 @@ class POLERmap():
                                                 found = True
 
                                 # No existing entities so start with a new shell
-                                if found == False:
-                                    if e['LABEL'][0] == 'p':
+                                if found == False and k != 'LABEL':
+                                    if e['TYPE'][0].lower() == 'p':
                                         mE = self.createPerson()
-                                    elif e['LABEL'][0] == 'o':
+                                    elif e['TYPE'][0].lower()  == 'o':
                                         mE = self.createObject()
-                                    elif e['LABEL'][0] == 'l':
+                                    elif e['TYPE'][0].lower()  == 'l':
                                         mE = self.createLocation()
                                     else:
                                         mE = self.createEvent()
@@ -370,22 +371,32 @@ class POLERmap():
                                     newE.append(mE)
 
                                 # Assign the key value to this entity
-                                mE[k] = row[c]
+                                if k!= 'LABEL':
+                                    mE[k] = row[c]
 
+                # Fill in the custom values
+                for mE in newE:
+                    for k in mE.keys():
+                        if mE[k] == '':
+                            for e in self.vMap['entities']:
+                                if e['LABEL'] == mE['LABEL']:
+                                    if '*' in e[k]:
+                                        mE[k] = e[k][:len(e[k])-1]
+                
+                
                 # Check the entities extracted in the row and fill the GUID to complete the entity
                 for mE in newE:
-                    print("\n\n!!!!!\n%s" % mE)
-                    if mE['TYPE'][0] == 'Person':
+                    if mE['TYPE'][0].lower() == 'p':
                         if mE not in data['Persons']:
                             mE['GUID'] = self.DB.insertPerson(mE['P_GEN'], mE['P_FNAME'], mE['P_LNAME'], mE['P_DOB'], mE['P_POB'], mE['P_ORIGIN'], None, mE['P_LOGSOURCE'], mE['DESC'])
                             data['Persons'].append(mE)
 
-                    elif mE['TYPE'][0] == 'Object':
+                    elif mE['TYPE'][0].lower() == 'o':
                         if mE not in data['Objects']:
                             mE['GUID'] = self.DB.insertObject(mE['O_TYPE'], mE['O_CATEGORY'], mE['O_DESC'], mE['O_CLASS1'], mE['O_CLASS2'], mE['O_CLASS3'], mE['O_ORIGIN'], None, mE['O_LOGSOURCE'])
                             data['Objects'].append(mE)
 
-                    elif mE['TYPE'][0] == 'Location':
+                    elif mE['TYPE'][0].lower() == 'l':
                         if mE not in data['Locations']:
                             mE['GUID'] = self.DB.insertLocation(mE['L_TYPE'], mE['L_DESC'], mE['L_XCOORD'], mE['L_YCOORD'], mE['L_ZCOORD'], mE['L_CLASS1'], mE['L_ORIGIN'], None, mE['L_LOGSOURCE'])
                             data['Locations'].append(mE)
@@ -402,25 +413,27 @@ class POLERmap():
                     for S in newE:
                         for T in newE:
                             if S['LABEL'] == r['S_LABEL'] and T['LABEL'] == r['T_LABEL']:
-                                print("Insert rel %d %s %s %d %s" % ( S['GUID'], S['TYPE'], r['R_TYPE'], T['GUID'], T['TYPE']))
+                                #print("Insert rel %d %s %s %d %s" % ( S['GUID'], S['TYPE'], r['R_TYPE'], T['GUID'], T['TYPE']))
+                                self.DB.insertRelation(S['GUID'], S['TYPE'], r['R_TYPE'], T['GUID'], T['TYPE'])
 
         self.moveFile('%s%s' % (self.processed, file), '%s%s' % (self.folder, file))
 
 
 #TODO
-# Map to Index through views and models
-# Persist maps
-#import OrientModels as om
-#DB = om.OrientModel(None)
-#folder = 'C:\\Users\\d063195\\Desktop\\_Projects\\20170120_VP\\Barnsley MBC Secure collaboration\\Vulnerable People PoC - Data files\\'
-#fname = 'Person.xlsx'
-#P = POLERmap(folder, DB)
-#P.getFile(fname)
+# Test for all
+'''
+import OrientModels as om
+DB = om.OrientModel(None)
+processed = 'C:\\Users\\d063195\\Desktop\\stoicoin\\application\\services\\data\\processed\\'
+config = 'C:\\Users\\d063195\\Desktop\\stoicoin\\application\\services\\config\\'
+upload = 'C:\\Users\\d063195\\Desktop\\stoicoin\\application\\services\\data\\upload\\'
+folder = 'C:\\Users\\d063195\\Desktop\\stoicoin\\application\\services\\data\\'
+fname = 'MPICE.xlsx'
+mapname = config + 'POLE_MAP_MPICE1.json'
+P = POLERmap(folder, DB, processed, config, upload)
+P.setvMap('MPICE1')
+view, fURL = P.getFile(fname)
 #headers = P.getColumns()
-#P.POLERExtract(v)
+P.POLERExtract(view, fURL, 200000001120202)
 '''
-TODO
-Full test of extraction without pandas
 
-
-'''
