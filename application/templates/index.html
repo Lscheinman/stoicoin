@@ -5788,6 +5788,34 @@
                                 this.getSplitAppObj().to(this.createId("ReportBuilder"));
                                 MessageToast.show("Build reports from existing entities.");
 
+                                var oItemSelectTemplateA = new sap.ui.core.Item({
+                                                key: "{GUID}",
+                                                text: "{NAME}"
+                                                });
+
+                                var menuModel = sap.ui.getCore().getModel("MENUS");
+                                menuModel.setSizeLimit(10000);
+
+                                var DIRPIR = this.byId("ReportBuild-PIR");
+                                DIRPIR.setModel(menuModel);
+                                DIRPIR.bindAggregation("items", "/PIR", oItemSelectTemplateA);
+
+                                var PERSONS = this.byId("ReportBuild-Persons");
+                                PERSONS.setModel(menuModel);
+                                PERSONS.bindAggregation("items", "/PERSONS", oItemSelectTemplateA);
+
+                                var OBJECTS = this.byId("ReportBuild-Objects");
+                                OBJECTS.setModel(menuModel);
+                                OBJECTS.bindAggregation("items", "/OBJECTS", oItemSelectTemplateA);
+
+                                var LOCATIONS = this.byId("ReportBuild-Locations");
+                                LOCATIONS.setModel(menuModel);
+                                LOCATIONS.bindAggregation("items", "/LOCATIONS", oItemSelectTemplateA);
+
+                                var EVENTS = this.byId("ReportBuild-Events");
+                                EVENTS.setModel(menuModel);
+                                EVENTS.bindAggregation("items", "/EVENTS", oItemSelectTemplateA);
+
                                 var oRichTextEditor = new sap.ui.richtexteditor.RichTextEditor({
                                         editorType: sap.ui.richtexteditor.EditorType.TinyMCE4,
                                         width: "100%",
@@ -8931,7 +8959,7 @@
                                                 omap['TYPE'] = data['message'];
                                                 sap.ui.getCore().getModel("MENUS").getProperty("/MAPS/").push(omap);
                                                 sap.ui.getCore().getModel("MENUS").refresh();
-    
+
                                         }
                                 });
 
