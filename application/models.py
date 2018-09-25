@@ -69,8 +69,11 @@ class User:
         self.PubDB = op.OsintPubDB(self.ODB)
         self.RSS = rss.OsintRSS(self.ODB)
         self.POLER = ps.POLERmap(self.datapath, self.ODB, self.processed, self.authpath, self.upload)
-        with open(str(self.authpath) + '%s_AUTH_Facebook.json' % self.username, 'r') as FB:
-            fbAuth = json.load(FB)
+        try:
+            with open(str(self.authpath) + '%s_AUTH_Facebook.json' % self.username, 'r') as FB:
+                fbAuth = json.load(FB)
+        except:
+            fbAuth = None
         self.Facebook = fb.OsintFacebook(fbAuth, self.ODB)
         self.user = self.find()
         self.threads = []

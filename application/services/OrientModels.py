@@ -3,7 +3,6 @@ import pyorient
 import pandas as pd
 import time, os, json, requests, random, jsonify, decimal
 
-
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from openpyxl import load_workbook
@@ -202,7 +201,7 @@ class OrientModel():
             else:
                 if data not in User['ACTIVITIES']:
                     User['ACTIVITIES'].append(data)
-                    
+
 
         User['ACTIVITIES'] = sorted(User['ACTIVITIES'], key=lambda i: i['DTG'], reverse=True)
         User['TASKS'] = sorted(User['TASKS'], key=lambda i: i['DTG'], reverse=True)
@@ -307,7 +306,7 @@ class OrientModel():
         r = self.client.command(sql)[0].oRecordData
         if self.Verbose == True:
             TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-            print("[%s_ODB-get_entity]: Getting %s entity profile for GUID %s:\nSQL:\t%s\nRESULT:\t%s" % (TS, TYPE, GUID, sql, r))         
+            print("[%s_ODB-get_entity]: Getting %s entity profile for GUID %s:\nSQL:\t%s\nRESULT:\t%s" % (TS, TYPE, GUID, sql, r))
         if TYPE == 'Person':
 
             result['NAME']     = r['FNAME'] + ' ' + r['LNAME']
@@ -370,7 +369,7 @@ class OrientModel():
 
         if isinstance(result['NAME'], str) == False:
             result['NAME'] == str(result['NAME'])
-            
+
         return result
 
 
@@ -465,7 +464,12 @@ class OrientModel():
 
         if len(r) == 0:
             # No matches so get the last GUID of the event
-            GUID = int(str(lead + str(time.time()).replace(".", "")))
+            # TODO encode other information in the GUID such as expunge date, classification, and data source
+            GUID = str(lead + str(time.time()).replace(".", ""))
+            lenDiff = 19 - len(GUID)
+            for i in range(lenDiff):
+                GUID = GUID + '0'
+            GUID = int(GUID)
             exists = 0
         else:
             '''
@@ -473,9 +477,7 @@ class OrientModel():
             Second check if the pattern is exact
             refs = ORIGINREF.split('-')
             for r in refs: if check == r, exists
-
             '''
-
             GUID = int(r[0].oRecordData['GUID'])
             exists = 1
 
@@ -782,6 +784,7 @@ class OrientModel():
         C1 = 'C1'
         DESC = 'Loaded from VPScene1'
         Person = 'Person'
+        Object = 'Object'
         Event = 'Event'
         ChargedWith = 'ChargedWith'
         Family = 'Family'
@@ -803,7 +806,11 @@ class OrientModel():
             {'P_FNAME' : 'Eric', 'P_LNAME' : 'Spoon'},
             {'P_FNAME' : 'Ethel', 'P_LNAME' : 'Spoon'},
             {'P_FNAME' : 'Sid', 'P_LNAME' : 'Spoon'},
-            {'P_FNAME' : 'Hakim', 'P_LNAME' : 'Abdul'}
+            {'P_FNAME' : 'Hakim', 'P_LNAME' : 'Abdul'},
+            {'P_FNAME' : 'Theo', 'P_LNAME' : 'Cloth'},
+            {'P_FNAME' : 'Teddy', 'P_LNAME' : 'Cloth'},
+            {'P_FNAME' : 'Terry', 'P_LNAME' : 'Cloth'},
+            {'P_FNAME' : 'Polly', 'P_LNAME' : 'Kettle'}
         ])
 
         for p in People:
@@ -835,6 +842,15 @@ class OrientModel():
                 Sid = P
             elif p['P_FNAME'] == 'Hakim':
                 Hakim = P
+            elif p['P_FNAME'] == 'Teddy':
+                Teddy = P
+            elif p['P_FNAME'] == 'Theo':
+                Theo = P
+            elif p['P_FNAME'] == 'Terry':
+                Terry = P
+            elif p['P_FNAME'] == 'Polly':
+                Polly = P
+
         RawEvents = [
         ('Crime', 'Domestic Violence', 'Chris was charged with the crime by Patty.', C1),
         ('Crime', 'Drug Trafficking', 'June was charged with the crime by Patty.', C1),
@@ -847,6 +863,14 @@ class OrientModel():
         ('Social Services', 'Assessment', 'Tim conducted an assessment on Eric.', B1),
         ('Health', 'Emergency call', 'Hakim treated Jimmy for bruises.', B1),
         ('Health', 'Emergency call', 'Hakim treated Eric for dementia induced injuries.', B1),
+        ('Education', 'Missed School', 'Teddy was reported absent from school today.', B1),
+        ('Social Services', 'Unemployment', 'Terry registered for unemployment.', B1),
+        ('Education', 'Missed School', 'Teddy was reported absent from school today.', B1),
+        ('Education', 'Missed School', 'Teddy was reported absent from school today.', B1),
+        ('Education', 'Missed School', 'Teddy was reported absent from school today.', B1),
+        ('Crime', 'Alcohol related', 'Theo was charged with the crime by Patty.', C1),
+        ('Education', 'Missed School', 'Teddy was reported absent from school today.', B1),
+
         ]
         xBox = [535133, 535857]
         yBox = [-15918, -13174]
@@ -896,6 +920,15 @@ class OrientModel():
                 self.insertRelation(Hakim, Person, SubjectofContact, e['GUID'], Event)
             if 'Ethel' in e['E_DESC']:
                 self.insertRelation(Hakim, Person, SubjectofContact, e['GUID'], Event)
+            if 'Teddy' in e['E_DESC']:
+                self.insertRelation(Teddy, Person, SubjectofContact, e['GUID'], Event)
+            if 'Theo' in e['E_DESC']:
+                self.insertRelation(Theo, Person, SubjectofContact, e['GUID'], Event)
+            if 'Terry' in e['E_DESC']:
+                self.insertRelation(Terry, Person, SubjectofContact, e['GUID'], Event)
+
+
+        ClothFamily = self.insertObject('Group', 'Family', 'Cloth Family', 'Troubled', 4, 0, 0, 0, A1)
 
         self.insertRelation(June, Person, Family, Johnny, Person)
         self.insertRelation(Tim, Person, Knows, June, Person)
@@ -905,7 +938,14 @@ class OrientModel():
         self.insertRelation(Sid, Person, Family, Eric, Person)
         self.insertRelation(Sid, Person, Family, Ethel, Person)
         self.insertRelation(Sid, Person, Knows, Connie, Person)
-        self.insertRelation(Ethel, Person, Family, Eric, Person)
+        self.insertRelation(Teddy, Person, Family, Theo, Person)
+        self.insertRelation(Terry, Person, Family, Theo, Person)
+        self.insertRelation(Terry, Person, Family, Teddy, Person)
+        self.insertRelation(Theo, Person, Family, Polly, Person)
+        self.insertRelation(ClothFamily, Object, Family, Theo, Person)
+        self.insertRelation(ClothFamily, Object, Family, Teddy, Person)
+        self.insertRelation(ClothFamily, Object, Family, Terry, Person)
+
 
     def TextAnalytics(self, TA_CONFIG, text, TA_RUN, ODB):
         if self.HDB != None:

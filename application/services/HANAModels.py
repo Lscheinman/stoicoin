@@ -1206,6 +1206,7 @@ class HANAModel():
         Knows = 'Knows'
         RecordedBy = 'RecordedBy'
         SubjectofContact = 'SubjectofContact'
+        LANG = 'en'
 
         # Create the people
         People = ([
@@ -1220,40 +1221,53 @@ class HANAModel():
             {'P_FNAME' : 'Eric', 'P_LNAME' : 'Spoon'},
             {'P_FNAME' : 'Ethel', 'P_LNAME' : 'Spoon'},
             {'P_FNAME' : 'Sid', 'P_LNAME' : 'Spoon'},
-            {'P_FNAME' : 'Hakim', 'P_LNAME' : 'Abdul'}
+            {'P_FNAME' : 'Hakim', 'P_LNAME' : 'Abdul'},
+            {'P_FNAME' : 'Theo', 'P_LNAME' : 'Cloth'},
+            {'P_FNAME' : 'Teddy', 'P_LNAME' : 'Cloth'},
+            {'P_FNAME' : 'Terry', 'P_LNAME' : 'Cloth'},
+            {'P_FNAME' : 'Polly', 'P_LNAME' : 'Kettle'}  
         ])
 
         for p in People:
 
-            sql = '''SELECT "P_GUID" FROM "POLER"."PERSON" WHERE "P_FNAME" = '%s' AND "P_LNAME" = '%s' ''' % (p['P_FNAME'], p['P_LNAME'])
-            P = self.cursor.execute(sql).fetchone()
+            sql = ''' select GUID from Person where FNAME = '%s' and LNAME = '%s' ''' % (p['P_FNAME'], p['P_LNAME'])
+            P = self.client.command(sql)
+            P = P[0].oRecordData['GUID']
             if p['P_FNAME'] == 'Johnny':
-                Johnny = P[0]
+                Johnny = P
             elif p['P_FNAME'] == 'Janney':
-                Janney = P[0]
+                Janney = P
             elif p['P_FNAME'] == 'Jimmy':
-                Jimmy = P[0]
+                Jimmy = P
             elif p['P_FNAME'] == 'Chris':
-                Chris = P[0]
+                Chris = P
             elif p['P_FNAME'] == 'Connie':
-                Connie = P[0]
+                Connie = P
             elif p['P_FNAME'] == 'Tim':
-                Tim = P[0]
+                Tim = P
             elif p['P_FNAME'] == 'Patty':
-                Patty = P[0]
+                Patty = P
             elif p['P_FNAME'] == 'June':
-                June = P[0]
+                June = P
             elif p['P_FNAME'] == 'Eric':
-                Eric = P[0]
+                Eric = P
             elif p['P_FNAME'] == 'Ethel':
-                Ethel = P[0]
+                Ethel = P
             elif p['P_FNAME'] == 'Sid':
-                Sid = P[0]
-            elif p['P_FNAME'] == 'Hakim':
-                Hakim = P[0]
+                Sid = P
+            elif p['P_FNAME'] == 'Teddy':
+                Teddy = P
+            elif p['P_FNAME'] == 'Theo':
+                Theo = P
+            elif p['P_FNAME'] == 'Terry':
+                Terry = P
+            elif p['P_FNAME'] == 'Polly':
+                Polly = P                
+            
         RawEvents = [
         ('Crime', 'Domestic Violence', 'Chris was charged with the crime by Patty.', C1),
         ('Crime', 'Drug Trafficking', 'June was charged with the crime by Patty.', C1),
+        ('Social Services', 'Assessment', 'Tim conducted a route call on Eric and recorded that Ethel is his only point of contact.', C1),
         ('Crime', 'Child Abuse', 'Connie was charged with the crime.', C1),
         ('Social Services', 'Assessment', 'Tim conducted an assessment on Johnny.', B1),
         ('Crime', 'Child Abuse', 'Connie was charged with the crime.', C1),
@@ -1262,6 +1276,14 @@ class HANAModel():
         ('Social Services', 'Assessment', 'Tim conducted an assessment on Eric.', B1),
         ('Health', 'Emergency call', 'Hakim treated Jimmy for bruises.', B1),
         ('Health', 'Emergency call', 'Hakim treated Eric for dementia induced injuries.', B1),
+        ('Education', 'Missed School', 'Teddy was reported absent from school today.', B1),
+        ('Social Services', 'Unemployment', 'Terry registered for unemployment.', B1),
+        ('Education', 'Missed School', 'Teddy was reported absent from school today.', B1),
+        ('Education', 'Missed School', 'Teddy was reported absent from school today.', B1),
+        ('Education', 'Missed School', 'Teddy was reported absent from school today.', B1),
+        ('Crime', 'Alcohol related', 'Theo was charged with the crime by Patty.', C1),
+        ('Education', 'Missed School', 'Teddy was reported absent from school today.', B1),
+
         ]
         xBox = [535133, 535857]
         yBox = [-15918, -13174]
@@ -1309,6 +1331,14 @@ class HANAModel():
                 self.insertRelation(Eric, Person, SubjectofContact, e['GUID'], Event)
             if 'Hakim' in e['E_DESC']:
                 self.insertRelation(Hakim, Person, SubjectofContact, e['GUID'], Event)
+            if 'Ethel' in e['E_DESC']:
+                self.insertRelation(Hakim, Person, SubjectofContact, e['GUID'], Event)
+            if 'Teddy' in e['E_DESC']:
+                self.insertRelation(Teddy, Person, SubjectofContact, e['GUID'], Event)
+            if 'Theo' in e['E_DESC']:
+                self.insertRelation(Theo, Person, SubjectofContact, e['GUID'], Event)   
+            if 'Terry' in e['E_DESC']:
+                self.insertRelation(Terry, Person, SubjectofContact, e['GUID'], Event)                    
 
         self.insertRelation(June, Person, Family, Johnny, Person)
         self.insertRelation(Tim, Person, Knows, June, Person)
@@ -1317,7 +1347,11 @@ class HANAModel():
         self.insertRelation(Jimmy, Person, Knows, Tim, Person)
         self.insertRelation(Sid, Person, Family, Eric, Person)
         self.insertRelation(Sid, Person, Family, Ethel, Person)
-        self.insertRelation(Ethel, Person, Family, Eric, Person)
+        self.insertRelation(Sid, Person, Knows, Connie, Person)
+        self.insertRelation(Teddy, Person, Family, Theo, Person)
+        self.insertRelation(Terry, Person, Family, Theo, Person)
+        self.insertRelation(Terry, Person, Family, Teddy, Person)
+        self.insertRelation(Theo, Person, Family, Polly, Person)
 
     def preLoadObjects(self):
 
@@ -1531,7 +1565,11 @@ class HANAModel():
             r = self.cursor.execute(sql).fetchall()
             if len(r) == 0:
                 # No matches so get the last GUID of the event
-                GUID = int(str('4' + str(time.time()).replace(".", "")))
+                GUID = str('4' + str(time.time()).replace(".", ""))
+                lenDiff = 19 - len(GUID)
+                for i in range(lenDiff):
+                    GUID = GUID + '0' 
+                GUID = int(GUID)
                 exists = 0
             else:
                 GUID = int(r[0][0])
@@ -1544,7 +1582,11 @@ class HANAModel():
             r = self.cursor.execute(sql).fetchall()
             if len(r) == 0:
                 # No matches so get the last GUID of the event
-                GUID = int(str('3' + str(time.time()).replace(".", "")))
+                GUID = str('3' + str(time.time()).replace(".", ""))
+                lenDiff = 19 - len(GUID)
+                for i in range(lenDiff):
+                    GUID = GUID + '0' 
+                GUID = int(GUID)                
                 exists = 0
             else:
                 GUID = int(r[0][0])
@@ -1557,7 +1599,11 @@ class HANAModel():
             r = self.cursor.execute(sql).fetchall()
             if len(r) == 0:
                 # No matches so get the last GUID of the event
-                GUID = int(str('1' + str(time.time()).replace(".", "")))
+                GUID = str('1' + str(time.time()).replace(".", ""))
+                lenDiff = 19 - len(GUID)
+                for i in range(lenDiff):
+                    GUID = GUID + '0' 
+                GUID = int(GUID)                
                 exists = 0
             else:
                 GUID = int(r[0][0])
@@ -1570,13 +1616,21 @@ class HANAModel():
             r = self.cursor.execute(sql).fetchall()
             if len(r) == 0:
                 # No matches so get the last GUID of the event
-                GUID = int(str('2' + str(time.time()).replace(".", "")))
+                GUID = str('2' + str(time.time()).replace(".", ""))
+                lenDiff = 19 - len(GUID)
+                for i in range(lenDiff):
+                    GUID = GUID + '0' 
+                GUID = int(GUID)                
                 exists = 0
             else:
                 GUID = int(r[0][0])
                 exists = 1
         else:
-            GUID = int(str('7' + str(time.time()).replace(".", "")))
+            GUID = str('7' + str(time.time()).replace(".", ""))
+            lenDiff = 19 - len(GUID)
+            for i in range(lenDiff):
+                GUID = GUID + '0' 
+            GUID = int(GUID)            
             exists = 0
 
         if self.Verbose == True:

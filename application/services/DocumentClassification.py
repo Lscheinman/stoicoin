@@ -209,7 +209,25 @@ class SetData():
         print("[%s_DOC-bag_of_words]: Process complete with %d words." % (TS, len(model_data)))             
     
         return model_data          
-        
+
+
+
+# Doc2Vec Method
+SD = SetData()
+SD.set_classes()
+SD.set_test_data() # Only run once 
+fd_text = SD.test_data_with_label();
+doc = fd_text[:0]
+lb = fd_text[:1]
+gen_op = LabelDoc(doc, lb, SD.classes)
+model = gensim.models.Doc2Vec(size=1000, min_count=0, alpha=0.025, min_alpha=0.025)
+model.build_vocab(gen_op)
+model.train(gen_op, epochs=100, total_examples=model.corpus_count)
+
+
+
+
+# Bag of Words Method        
 SD = SetData()
 SD.set_classes()
 SD.set_test_data()

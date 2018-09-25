@@ -26,7 +26,6 @@ class OsintFacebook():
     
     def setPath(self, auth):
         
-        print(auth)
         if auth == None:
             if '\\' in os.getcwd():
                 if debugging == False:
@@ -38,9 +37,13 @@ class OsintFacebook():
                     self.AUTH   = ('%s/application/services/config/AUTH_Twitter.json' % (os.getcwd()))
                 else:
                     self.AUTH   = ('%s/data/AUTH_Twitter.json' % (os.getcwd())) # debugging line 
-
-            self.fbEmail  = self.AUTH['client_key']
-            self.fbPass   = self.AUTH['client_secret']      
+            
+            try:
+                self.fbEmail  = self.AUTH['client_key']
+                self.fbPass   = self.AUTH['client_secret']      
+            except:
+                self.fbEmail  = ''
+                self.fbPass   = ''                
         
         else:
             self.fbEmail  = auth['client_key']
