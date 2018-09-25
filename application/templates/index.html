@@ -872,33 +872,16 @@
                         </Page>
                         <Page id="WebCrawler" title="Website Crawler" class="sapUiStdPage" showNavButton="true"
                                 navButtonText="Back" navButtonPress="onPressNavToOSINT">
-                                <VBox class="sapUiSmallMargin">
-                                        <f:SimpleForm id="FORMWEBCRAWLER"
-                                                editable="true"
-                                                layout="ResponsiveGridLayout"
-                                                title="Collection Options"
-                                                labelSpanXL="4"
-                                                labelSpanL="4"
-                                                labelSpanM="4"
-                                                labelSpanS="12"
-                                                adjustLabelSpan="false"
-                                                emptySpanXL="1"
-                                                emptySpanL="1"
-                                                emptySpanM="1"
-                                                emptySpanS="0"
-                                                columnsXL="1"
-                                                columnsL="1"
-                                                columnsM="1"
-                                                singleContainerFullSize="false"
-                                        >
-                                        <f:content>
+                                <HBox>
+
+                                        <VBox class="sapUiSmallMargin">
                                                 <Label text="PIR Reference" />
-                                                <Select id="WebCrawler-searchReference" >
+                                                <Select id="WebCrawler-searchReference" width="200px" >
                                                         <items>
                                                         </items>
                                                 </Select>
                                                 <Label text="Search depth" />
-                                                <Select id="WebCrawler-searchDepth" >
+                                                <Select id="WebCrawler-searchDepth" width="200px" >
                                                         <items>
                                                                 <core:Item text="Single Page"     key="Single"/>
                                                                 <core:Item text="First degree"    key="First"/>
@@ -906,32 +889,39 @@
                                                         </items>
                                                 </Select>
                                                 <Label text="Website URL" />
-                                                <Input id="WebCrawler-startURL" class="sapUiSmallMarginBottom" />
+                                                <Input id="WebCrawler-startURL" class="sapUiSmallMarginBottom" width="200px"/>
                                                 <Label text="Search term" />
-                                                <Input id="WebCrawler-searchTerms" class="sapUiSmallMarginBottom" />
+                                                <Input id="WebCrawler-searchTerms" class="sapUiSmallMarginBottom" width="200px" />
                                                 <Label text="Search language" />
-                                                <Select id="WebCrawler-searchLanguage" >
+                                                <Select id="WebCrawler-searchLanguage" width="200px">
                                                         <items>
-                                                                <core:Item text="Url dependent"  key=""/>
+                                                                <core:Item text="URL based"  key=""/>
                                                                 <core:Item text="English"  key="en"/>
                                                                 <core:Item text="العربية"    key="ar"/>
                                                                 <core:Item text="French"   key="fr"/>
                                                         </items>
                                                 </Select>
-                                                <Switch id='WebCrawler-showNavigation' state="false" customTextOn="Show" customTextOff="Hide">
+                                                </VBox>
+                                                <VBox class="sapUiSmallMargin">
+                                                <Label text="Crawler Options" />
+                                                <Switch id='WebCrawler-showNavigation' state="false" customTextOn="On" customTextOff="Off">
                                                         <layoutData>
                                                                 <FlexItemData growFactor="1" />
                                                         </layoutData>
                                                 </Switch>
-                                                <Switch id='WebCrawler-searchEngine' state="false" customTextOn="Chrome" customTextOff="FireFox">
-                                                        <layoutData>
-                                                                <FlexItemData growFactor="1" />
-                                                        </layoutData>
-                                                </Switch>
+                                                <RadioButtonGroup id='WebCrawler-searchEngine' valueState="Warning">
+                                                        <buttons>
+                                                                <RadioButton id="None" text="None"/>
+                                                                <RadioButton id="Chrome" text="Chrome"/>
+                                                                <RadioButton id="Firefox" text="Firefox"/>
+                                                        </buttons>
+                                                </RadioButtonGroup>
                                                 <Button id="WebCrawler-Button" text="Start Collection" press="onPressStartWebCrawler" type="Emphasized"/>
-                                        </f:content>
-                                        </f:SimpleForm>
-                                </VBox>
+                                                </VBox>
+
+                                </HBox>
+
+
                         </Page>
                 </detailPages>
                 <!---MAIN MENU OF OPTIONS-->
