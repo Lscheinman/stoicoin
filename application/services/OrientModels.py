@@ -537,9 +537,7 @@ class OrientModel():
         P_GUID, exists = self.EntityResolve({'TYPE' : 'Person', 'LOOKUP' : '%s' % P_ORIGINREF})
         if exists == 0:
             sql = '''create vertex Person set GUID = '%s', GEN = '%s', FNAME = '%s', LNAME = '%s', DOB = '%s', POB = '%s', ORIGIN = '%s', ORIGINREF = '%s', LOGSOURCE = '%s' ''' % (P_GUID, P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE)
-            print(sql)
             self.client.command(sql)
-
             if self.HDB != None:
                 try:
                     self.HDB.insertODBPerson(P_GUID, P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE, DESC)
