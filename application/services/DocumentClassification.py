@@ -17,6 +17,7 @@ class LabelDoc():
         self.label = label
         self.doc_list = doc_list
         self.categories = categories
+        cwd = os.getcwd()
         if 'C:\\' in cwd:
             self.dataURL = '%s\\data\\sets\\' % cwd
             self.lakeURL = 'C:\\Users\\d063195\\Desktop\\Lake\\'

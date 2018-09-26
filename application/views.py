@@ -78,7 +78,7 @@ def register_proxy():
 
     if not user.register(password, email, tel, location, image, utype):
         MSG = {'messages' :["A user with that username already exists."]}
-        print(MSG)
+
         return(jsonify(MSG['messages'][0]))
     else:
         MSG = {'messages' :[{'ROLE' : utype,
@@ -86,7 +86,6 @@ def register_proxy():
                              'GUID' : user.GUID,
                              'EMAIL' : email,
                              'NAME' : username}]}
-        print(MSG)
 
         return jsonify(MSG['messages'][0])
 
@@ -461,7 +460,6 @@ def run_ta():
     if check_user() == True:
         user = User(session["username"])
         TA_Profile = user.run_ta(text, TA_CONFIG)
-        print(TA_Profile)
         return jsonify(TA_Profile)
 
     else:
