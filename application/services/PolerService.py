@@ -76,7 +76,9 @@ class POLERmap():
                                 {LABEL : 'oMosaic', O_TYPE : 'MOSAIC', O_CATEGORY : 'MOSAIC Type', O_DESC : 'MOSAIC Property', O_CLASS1 : 'MOSAIC HH Composition',
                                  O_CLASS2 : 'MOSAIC Age Brand', O_CLASS3: 'MOSAIC No of Children', O_ORIGIN : 'MOSAIC Household Income', O_LOGSOURCE : CLASSIFICATION}]
                                  )
+            # Need translation of this from UI to dictionary as with concatenation
             vMap['rules'] = [{'VP_RISK' : vMap['entities'][0][P_DOB] + vMap['entities'][0][P_LOGSOURCE]}]
+    
 
         else:
             for vMap in self.Maps:

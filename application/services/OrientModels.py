@@ -507,23 +507,48 @@ class OrientModel():
 
         return O_GUID
 
+    def name_extract(self, name):
+    
+        if name.count(' ') == 1:
+            #1st space
+            sp = name.find(' ') 
+            LNAME = name[sp+1:len(name)]  
+            
+        elif name.count(' ') == 2:
+            #2nd space
+            sp = name[name.find(' ')+1:].find(' ') + name.find(' ') + 1
+            LNAME = name[sp+1:len(name)]  
+            
+        elif name.count(' ') == 3:
+            #3rd space
+            sp = name[name[name.find(' ')+1:].find(' ') + name.find(' ') + 2:].find(' ') + name[name.find(' ')+1:].find(' ') + name.find(' ') + 2
+            LNAME = name[sp+1:len(name)]          
+           
+        else:
+            sp = len(name)
+            LNAME = 'Doe'
+            
+        FNAME = name[:sp]
+            
+        return FNAME, LNAME    
+    
     def insertPerson(self, P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE, DESC):
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         if self.Verbose == True:
             print("[%s_ODB-insertPerson]: process started." % (TS))
 
         if type(P_FNAME) != str:
-            P_FNAME = 'Unknown'
+            P_FNAME = 'Unk'
 
         if type(P_LNAME) != str:
-            P_LNAME = 'Unknown'
+            P_LNAME = 'Unk'
 
         if len(DESC) == 0 or DESC == None:
             DESC = 'Record created on %s' % TS
         if P_FNAME == 'Unk' or len(P_FNAME) < 2:
-            P_FNAME = lname = "Unknown"
+            P_FNAME, P_LNAME = self.name_extract(P_FNAME)
         if P_LNAME == 'Unk' or len(P_LNAME) < 2:
-            fname = P_LNAME = "Unknown"
+            P_LNAME = "Unknown"
         P_DOB = str(self.check_date(P_DOB))[:10]
         if type(P_POB) == str:
             P_POB = P_POB.replace("'", "").replace('"', '')
