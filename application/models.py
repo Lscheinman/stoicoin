@@ -10,8 +10,6 @@ from passlib.hash import bcrypt
 import uuid
 from threading import Thread
 
-
-
 debugging = False
 if debugging == False:
     from application.services import OsintTwitter as ot
@@ -93,6 +91,7 @@ class User:
         return False
     def is_authenticated(self):
         return True
+
 
     def startHANA(self):
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')

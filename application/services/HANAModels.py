@@ -31,8 +31,11 @@ class HANAModel():
                 auth = '%s/config/AUTH_HANA.json' % (os.getcwd())
                 self.BaseBook   = '%s/data/BaseBook.xlsx' % (os.getcwd()) # debugging line
                 self.SocialPath   = '%s/data/Social.csv' % (os.getcwd()) # debugging line
-
-        keys = json.loads(open(auth).read())
+        try:
+            keys = json.loads(open(auth).read())
+        except:
+            print('No HANA detected')
+            return None
         self.cursor     = None
         self.Live       = False
         self.host       = keys['host']

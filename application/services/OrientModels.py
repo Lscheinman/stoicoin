@@ -9,7 +9,7 @@ from openpyxl import load_workbook
 from openpyxl import Workbook
 from threading import Thread
 from passlib.hash import bcrypt
-debugging = False
+debugging = True
 
 if debugging == False:
     from application.services import OsintCrawler as oc
@@ -101,11 +101,24 @@ class OrientModel():
 
     def check_date(self, E_DATE):
 
+        if str(type(E_DATE)) == "<class 'datetime.datetime'>":
+            E_DATE = E_DATE.strftime('%Y-%m-%d %H:%M:%S')
+            return E_DATE
+        elif str(type(E_DATE)) == "<class 'datetime.date'>":
+            E_DATE = E_DATE.strftime('%Y-%m-%d %H:%M:%S') 
+            return E_DATE
+        elif str(type(E_DATE)) == "<class 'pandas._libs.tslib.Timestamp'>":
+            E_DATE = E_DATE.to_pydatetime().strftime('%Y-%m-%d %H:%M:%S')
+            return E_DATE
+        elif str(type(E_DATE)) == "<class 'pandas._libs.tslib.NaTType'>":
+            E_DATE = '2000-01-01 00:00'
+            return E_DATE
+        
         datePatterns = ['%Y-%m-%d', '%d-%m-%Y', '%m-%d-%Y', '%Y-%d-%m', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d', '%Y/%d/%m', '%d.%m.%Y']
         for p in datePatterns:
             try:
                 TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
-                checkedE_DATE = datetime.strftime((datetime.strptime(E_DATE, p)), datePatterns[0])
+                checkedE_DATE = datetime.strftime((datetime.strptime(E_DATE[:10], p)), datePatterns[0])
                 if self.Verbose == True:
                     print("[%s_ODB-check_date]: received pattern %s with %s and returned %s." % (TS, p, E_DATE, checkedE_DATE))
                 return checkedE_DATE
@@ -508,7 +521,16 @@ class OrientModel():
         return O_GUID
 
     def name_extract(self, name):
+        
+        # Change the name into a list for cleaning
+        nlist = name.split(' ')
+        name = ''
+        for n in nlist:
+            n = n.capitalize()
+            name = name + n + ' '
+        name = name.strip()
     
+        # Check if this is a full name or not and separate the given names and surname
         if name.count(' ') == 1:
             #1st space
             sp = name.find(' ') 
@@ -526,33 +548,36 @@ class OrientModel():
            
         else:
             sp = len(name)
-            LNAME = 'Doe'
+            LNAME = 'None found'
             
         FNAME = name[:sp]
             
         return FNAME, LNAME    
     
     def insertPerson(self, P_GEN, P_FNAME, P_LNAME, P_DOB, P_POB, P_ORIGIN, P_ORIGINREF, P_LOGSOURCE, DESC):
+        GENS = ['F', 'M', 'U']
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         if self.Verbose == True:
             print("[%s_ODB-insertPerson]: process started." % (TS))
-
+        
         if type(P_FNAME) != str:
-            P_FNAME = 'Unk'
-
-        if type(P_LNAME) != str:
-            P_LNAME = 'Unk'
+            P_FNAME = 'Unk'        
+        
+        if len(P_LNAME) == 0 or type(P_LNAME) != str:
+            P_FNAME, P_LNAME = self.name_extract(P_FNAME)
 
         if len(DESC) == 0 or DESC == None:
             DESC = 'Record created on %s' % TS
-        if P_FNAME == 'Unk' or len(P_FNAME) < 2:
-            P_FNAME, P_LNAME = self.name_extract(P_FNAME)
-        if P_LNAME == 'Unk' or len(P_LNAME) < 2:
-            P_LNAME = "Unknown"
+        
+        P_DOB = self.check_date(P_DOB)
+        
+        if str(type(P_DOB)) == "<class 'datetime.datetime'>":
+            P_DOB = P_DOB.strftime('%Y-%m-%d %H:%M:%S')        
+            
         P_DOB = str(self.check_date(P_DOB))[:10]
         if type(P_POB) == str:
             P_POB = P_POB.replace("'", "").replace('"', '')
-        if P_GEN == None:
+        if P_GEN == None or P_GEN not in GENS:
             P_GEN = 'U'
 
         P_FNAME = (P_FNAME.replace("'", "").replace("\n", ""))[:60]
@@ -628,6 +653,8 @@ class OrientModel():
         if len(E_LOGSOURCE) > 199:
             E_LOGSOURCE = E_LOGSOURCE[:200]
 
+        E_DATE = self.check_date(E_DATE)
+        
         if ':' in E_DATE:
             if 'pm' in E_DATE:
                 E_TIME = E_DATE[:E_DATE.find('p')][:4]
@@ -685,7 +712,13 @@ class OrientModel():
         return E_GUID
 
     def insertLocation(self, L_TYPE, L_DESC, L_XCOORD, L_YCOORD, L_ZCOORD, L_CLASS1, L_ORIGIN, L_ORIGINREF, L_LOGSOURCE):
-
+        
+        DESClist = L_DESC.split(' ')
+        L_DESC = ''
+        for d in DESClist:
+            L_DESC = L_DESC + d + ' '
+        L_DESC = L_DESC.strip()
+        
         TS = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
         L_LOGSOURCE = str(L_LOGSOURCE)
         L_DESC = str(L_DESC).replace('"', "").replace("'", '').replace('\\', '').replace('\n', '').replace('\t', '')
@@ -720,8 +753,23 @@ class OrientModel():
                     pass
         return L_GUID
 
+    
+    def GUIDcheck(self, GUID):
+        
+        if str(GUID)[0] == '1':
+            return 'Person'
+        elif str(GUID)[0] == '2':
+            return 'Object'
+        elif str(GUID)[0] == '3':
+            return 'Location'
+        elif str(GUID)[0] == '4':
+            return 'Event'        
+    
     def insertRelation(self, SOURCEGUID, SOURCETYPE, TYPE, TARGETGUID, TARGETTYPE):
 
+        SOURCETYPE = self.GUIDcheck(SOURCEGUID)
+        TARGETTYPE = self.GUIDcheck(TARGETGUID)
+        
         sql = ''' match {class: V, as: u, where: (GUID = %s)}.both('%s') {class: V, as: e, where: (GUID = %s) } return $elements ''' % (TARGETGUID, TYPE, SOURCEGUID)
         check = self.client.command(sql)
         if len(check) == 0:
