@@ -9,7 +9,7 @@ from openpyxl import load_workbook
 from openpyxl import Workbook
 from threading import Thread
 from passlib.hash import bcrypt
-debugging = True
+debugging = False
 
 if debugging == False:
     from application.services import OsintCrawler as oc
