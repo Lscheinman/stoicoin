@@ -21,7 +21,7 @@ googleapis-common-protos==1.5.3
 idna==2.7
 itsdangerous==0.24
 jdcal==1.4
-Jinja2==2.10
+Jinja2==2.11.3
 jsonify==0.5
 MarkupSafe==1.0
 numpy==1.15.0
