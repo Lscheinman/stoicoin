@@ -24,7 +24,7 @@ jdcal==1.4
 Jinja2==2.10
 jsonify==0.5
 MarkupSafe==1.0
-numpy==1.15.0
+numpy==1.22.0
 oauthlib==2.1.0
 openpyxl==2.5.5
 passlib==1.7.1
