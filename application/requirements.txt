@@ -4,7 +4,7 @@ beautifulsoup4==4.6.1
 blinker==1.4
 bs4==0.0.1
 cachetools==2.1.0
-certifi==2018.4.16
+certifi==2022.12.7
 celery==4.2.1
 cffi==1.11.5
 chardet==3.0.4
